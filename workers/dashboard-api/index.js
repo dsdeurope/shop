@@ -17,8 +17,13 @@ export default {
 
     if (url.pathname === '/api/dashboard') {
       try {
+        // Cache 60s pour économiser les KV list() (quota free: 1000/jour)
+        const cached = await env.KV.get('cache:dashboard');
+        if (cached) return new Response(cached, { headers: corsHeaders });
         const data = await aggregateDashboard(env);
-        return new Response(JSON.stringify(data), { headers: corsHeaders });
+        const json = JSON.stringify(data);
+        await env.KV.put('cache:dashboard', json, { expirationTtl: 60 });
+        return new Response(json, { headers: corsHeaders });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
       }
@@ -26,8 +31,12 @@ export default {
 
     if (url.pathname === '/api/spots') {
       try {
+        const cached = await env.KV.get('cache:spots');
+        if (cached) return new Response(cached, { headers: corsHeaders });
         const data = await aggregateSpots(env);
-        return new Response(JSON.stringify(data), { headers: corsHeaders });
+        const json = JSON.stringify(data);
+        await env.KV.put('cache:spots', json, { expirationTtl: 120 });
+        return new Response(json, { headers: corsHeaders });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
       }

@@ -57,6 +57,15 @@ jobs:
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           command: deploy workers/dashboard-api/index.js --name v35-dashboard-api
 
+      - name: Deploy DomainHunter
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy workers/domain-hunter/index.js --name v35-domain-hunter
+        env:
+          PROXY_LIST: ${{ secrets.PROXY_LIST }}
+
       - name: Deploy Sentinelle
         uses: cloudflare/wrangler-action@v3
         with:
@@ -93,5 +102,5 @@ jobs:
       - name: Confirm deployment
         run: |
           echo "✅ Dashboard live: https://shop.zenitlab.net"
-          echo "✅ Workers deployed: radar, backlink-hunter, domain-health, dashboard-api"
+          echo "✅ Workers deployed: radar, backlink-hunter, domain-health, dashboard-api, domain-hunter"
           echo "✅ Agents deployed: sentinelle, optimiseur, sequenceur"
