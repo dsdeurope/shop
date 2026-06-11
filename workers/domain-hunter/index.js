@@ -115,69 +115,93 @@ async function huntDomains(niche, env) {
   return report;
 }
 
-// ─── Candidats depuis Common Crawl — niche-aware ────────────────────────────
+// ─── Candidats — stratégie hybride (CC domain-level + Wayback outlinks + seeds) ─
 async function findCandidatesFromCrawl(niche, env) {
   const candidates = new Set();
   const SKIP = new Set([
     'github.com','google.com','youtube.com','facebook.com','twitter.com','x.com',
     'linkedin.com','amazon.com','wikipedia.org','shopify.com','woocommerce.com',
     'wordpress.com','wordpress.org','ahrefs.com','semrush.com','moz.com',
-    'brightlocal.com','agencyspotter.com','wordcount.com',
+    'brightlocal.com','agencyspotter.com','wordcount.com','aliexpress.com',
+    'amazon.fr','cdiscount.com','leboncoin.fr','ebay.fr',
   ]);
 
   const { headers } = buildFetchOptions(env.PROXY_LIST);
 
-  // Patterns Common Crawl spécifiques à chaque niche
-  const CC_PATTERNS = {
-    ecommerce: [
-      'url=*/products/*&output=json&limit=50',           // Shopify /products/
-      'url=*/collections/*&output=json&limit=50',        // Shopify /collections/
-      'url=*/product-category/*&output=json&limit=30',   // WooCommerce
-      'url=*/catalog/product/*&output=json&limit=30',    // Magento/PrestaShop
-    ],
-    seo_blog: [
-      'url=*/blog/seo/*&output=json&limit=40',
-      'url=*/category/seo/*&output=json&limit=40',
-    ],
-    local_seo: [
-      'url=*/nos-agences/*&output=json&limit=40',
-      'url=*/location/*&output=json&limit=40',
-    ],
-    marketing_agency: [
-      'url=*/case-studies/*&output=json&limit=40',
-      'url=*/services/*&output=json&limit=40',
-    ],
-  };
-
-  const patterns = CC_PATTERNS[niche] || CC_PATTERNS.seo_blog;
-
-  for (const pat of patterns.slice(0, 2)) {
+  // Strategy 1 — CC CDX domain-level sur chaque leader (fonctionne, index valide)
+  const leaders = JSON.parse(await env.KV.get(`leaders:${niche}`) || '[]');
+  for (const leader of leaders.slice(0, 4)) {
     try {
+      const leaderDomain = new URL(leader.url).hostname.replace(/^www\./, '');
       const resp = await fetch(
-        `https://index.commoncrawl.org/CC-MAIN-2024-10-index?${pat}`,
+        `https://index.commoncrawl.org/CC-MAIN-2026-21-index?url=${leaderDomain}/*&output=json&limit=30`,
         { headers, signal: AbortSignal.timeout(8000) }
       );
       const text = await resp.text();
       for (const line of text.split('\n').filter(Boolean)) {
         try {
           const entry = JSON.parse(line);
+          // Extrait les outlinks depuis les URLs trouvées
           const host = new URL(entry.url).hostname.replace(/^www\./, '');
-          // Filtre domaines génériques / trop connus
-          if (!SKIP.has(host) && !host.endsWith('.shopify.com') && !host.endsWith('.myshopify.com')) {
-            candidates.add(host);
-          }
+          if (!SKIP.has(host) && host !== leaderDomain) candidates.add(host);
         } catch { /* skip */ }
       }
-    } catch { /* fallback */ }
+    } catch { /* continue */ }
   }
 
-  // Source secondaire — backlinks KV filtrés par niche
+  // Strategy 2 — Seeds FR e-commerce connus (découverte immédiate sans API)
+  const NICHE_SEEDS = {
+    ecommerce: [
+      'mon-blouson.com','mon-habit-chauffant.com','mes-portefeuilles.com',
+      'applique-tendance.com','monpolaire.com','malampedechevet.com',
+      'comptoir-des-lampes.com','la-maison-du-porte-cle.com',
+      'instants-plaisirs.com','monbijouperso.fr','retourdeplage.fr',
+      'naturebelle.fr','homeluxe.fr','mon-porte-clef.fr','cotemaison.fr',
+      'robes-cocktail.fr','jupe-leopard.fr','jupeblanche.fr','jupecuir.fr',
+      'robe-midi.fr','wikimonde.com','tentree.com','sweetleaf.com',
+    ],
+    seo_blog: ['backlinko.com','ahrefs.com/blog','neilpatel.com','moz.com/blog'],
+    local_seo: [],
+    marketing_agency: [],
+  };
+  for (const seed of (NICHE_SEEDS[niche] || [])) {
+    if (!SKIP.has(seed)) candidates.add(seed);
+  }
+
+  // Strategy 3 — Wayback outlinks depuis un leader (si peu de candidats)
+  if (candidates.size < 10 && leaders.length > 0) {
+    try {
+      const leaderDomain = new URL(leaders[0].url).hostname.replace(/^www\./, '');
+      const resp = await fetch(
+        `https://web.archive.org/cdx/search/cdx?url=${leaderDomain}/*&output=json&limit=5&fl=original&filter=statuscode:200&collapse=urlkey`,
+        { headers, signal: AbortSignal.timeout(8000) }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        for (const row of data.slice(1, 3)) {
+          try {
+            const pageResp = await fetch(row[0], { headers, signal: AbortSignal.timeout(6000) });
+            if (!pageResp.ok) continue;
+            const html = await pageResp.text();
+            for (const m of html.matchAll(/href="https?:\/\/([^/"]+)/g)) {
+              const host = m[1].replace(/^www\./, '');
+              if (!SKIP.has(host) && host !== leaderDomain && !host.endsWith('.shopify.com')) {
+                candidates.add(host);
+              }
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch { /* skip */ }
+  }
+
+  // Strategy 4 — Backlinks KV (tous, pas de filtre niche car backlink-hunter n'a pas de niche)
   try {
-    const blKeys = await env.KV.list({ prefix: `backlinks:${niche}:` });
-    for (const k of blKeys.keys.slice(0, 5)) {
+    const blKeys = await env.KV.list({ prefix: 'backlinks:' });
+    for (const k of blKeys.keys.slice(0, 8)) {
       const data = await env.KV.get(k.name).then(v => v ? JSON.parse(v) : null);
       if (!data?.opportunities) continue;
-      for (const opp of data.opportunities.slice(0, 8)) {
+      for (const opp of data.opportunities.slice(0, 6)) {
         try {
           const host = new URL(opp.url).hostname.replace(/^www\./, '');
           if (!SKIP.has(host)) candidates.add(host);

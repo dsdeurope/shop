@@ -40,7 +40,7 @@ async function huntBacklinks(domain, env) {
 
   // Common Crawl
   const ccResp = await fetch(
-    `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${domain}&output=json&limit=200`,
+    `https://index.commoncrawl.org/CC-MAIN-2026-21-index?url=*.${domain}&output=json&limit=200`,
     { headers, cf }
   );
   const ccText = await ccResp.text();
