@@ -116,7 +116,7 @@
 
     async function fetchDashboardData() {
       try {
-        const resp = await fetch('/api/dashboard');
+        const resp = await fetch('https://v35-dashboard-api.ernestpedanou.workers.dev/api/dashboard');
         return resp.ok ? resp.json() : null;
       } catch { return null; }
     }

@@ -8,8 +8,10 @@ export default {
     const url = new URL(request.url);
 
     // CORS
+    const origin = request.headers.get('origin') || '';
+    const allowed = ['https://shop.zenithlab.net', 'https://v35-dashboard-api.ernestpedanou.workers.dev'];
     const corsHeaders = {
-      'Access-Control-Allow-Origin': 'https://shop.zenitlab.net',
+      'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
       'Content-Type': 'application/json',
     };
 
