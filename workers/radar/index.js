@@ -3,7 +3,7 @@
  * Découverte de domaines & opportunités SEO via crawl furtif.
  */
 
-import { rotateProxy, buildStealthHeaders } from '../../lib/stealth.js';
+import { buildFetchOptions } from '../../lib/stealth.js';
 import { filterPolluted, extractEntities } from '../../lib/seo.js';
 import { logError } from '../../lib/logger.js';
 
@@ -48,12 +48,13 @@ export default {
 };
 
 async function discoverOpportunities(target, env) {
-  const proxy = rotateProxy(env.PROXY_LIST);
-  const headers = buildStealthHeaders();
+  const { headers, cf } = buildFetchOptions(env.PROXY_LIST);
 
-  const resp = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`, {
+  const resp = await fetch(target, {
     headers,
-    cf: { resolveOverride: proxy },
+    cf: { ...cf, scrapeShield: false },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(12000),
   });
 
   if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
