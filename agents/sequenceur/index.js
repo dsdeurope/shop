@@ -37,11 +37,13 @@ async function sequence(env) {
     }
   }
 
-  // Alimente les queues des workers
+  // Alimente les queues — domaines dédupliqués pour backlink-hunter
+  const domains = [...new Set(queue.map(q => {
+    try { return new URL(q.url).hostname.replace(/^www\./, ''); } catch { return null; }
+  }).filter(Boolean))];
+
   await env.KV.put('queue:radar', JSON.stringify(queue.map(q => q.url)));
-  await env.KV.put('queue:backlink-hunter', JSON.stringify(queue.map(q => {
-    try { return new URL(q.url).hostname; } catch { return null; }
-  }).filter(Boolean)));
+  await env.KV.put('queue:backlink-hunter', JSON.stringify(domains));
 
   const report = {
     ts: new Date().toISOString(),

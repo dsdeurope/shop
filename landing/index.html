@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Zenithlab — Automatisation SEO, prospection intelligente et infrastructure digitale sur Cloudflare.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Zenithlab — SEO Automation">
+  <meta property="og:description" content="Infrastructure de prospection SEO autonome. Backlinks qualifiés, analyse de domaines, maillage sémantique.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zenithlab.net">
+  <title>Zenithlab — SEO Automation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b10;
+      --surface: #111520;
+      --border: #1e2535;
+      --accent: #4f8ef7;
+      --accent2: #00e5a0;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --card-bg: #0f1623;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(8, 11, 16, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+    .logo span { color: var(--accent); }
+    nav ul { list-style: none; display: flex; gap: 2rem; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color .2s; }
+    nav a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      text-align: center; padding: 8rem 2rem 4rem;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -40%; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(79,142,247,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.3);
+      color: var(--accent); padding: 4px 14px; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: .06em;
+      text-transform: uppercase; margin-bottom: 2rem;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+      max-width: 800px; margin-bottom: 1.5rem;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+
+    .hero-sub {
+      font-size: 1.15rem; color: var(--muted); max-width: 520px;
+      margin-bottom: 2.5rem; line-height: 1.7;
+    }
+
+    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      padding: .75rem 1.8rem; border-radius: 8px; font-size: .95rem;
+      font-weight: 600; text-decoration: none; transition: all .2s; cursor: pointer; border: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #3a7de8; transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* STATS */
+    .stats {
+      display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;
+      padding: 1rem 2rem 5rem; margin-top: 4rem;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2rem; font-weight: 800; color: var(--accent2); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    /* FEATURES */
+    .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 1rem;
+    }
+    .section h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -.02em; margin-bottom: 1rem; }
+    .section p.lead { color: var(--muted); font-size: 1.05rem; max-width: 520px; margin-bottom: 3rem; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.8rem; transition: border-color .2s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(79,142,247,.1); display: flex; align-items: center;
+      justify-content: center; font-size: 1.3rem; margin-bottom: 1.2rem;
+    }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .card p { color: var(--muted); font-size: .9rem; line-height: 1.6; }
+
+    /* HOW IT WORKS */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; }
+    .step { display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; }
+    .step-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 800;
+    }
+    .step h4 { font-size: .95rem; font-weight: 700; }
+    .step p { color: var(--muted); font-size: .875rem; line-height: 1.6; }
+
+    /* CTA SECTION */
+    .cta-section {
+      margin: 0 2rem 5rem;
+      background: linear-gradient(135deg, rgba(79,142,247,.08), rgba(0,229,160,.05));
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 4rem 2rem; text-align: center;
+      max-width: 1100px; margin: 0 auto 5rem;
+    }
+    .cta-section h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; margin-bottom: 1rem; }
+    .cta-section p { color: var(--muted); margin-bottom: 2rem; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+    footer p { color: var(--muted); font-size: .85rem; }
+    footer a { color: var(--muted); text-decoration: none; font-size: .85rem; }
+    footer a:hover { color: var(--text); }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    @media (max-width: 640px) {
+      nav ul { display: none; }
+      .stats { gap: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Zenith<span>lab</span></a>
+  <ul>
+    <li><a href="#features">Fonctionnalités</a></li>
+    <li><a href="#how">Fonctionnement</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+  </ul>
+  <a href="https://shop.zenithlab.net" class="btn btn-primary" style="padding:.55rem 1.2rem;font-size:.85rem;">Dashboard →</a>
+</nav>
+
+<section class="hero">
+  <div class="badge">Infrastructure V35 — Live sur Cloudflare</div>
+  <h1>Prospection SEO <em>autonome</em> et intelligente</h1>
+  <p class="hero-sub">
+    Découvrez des opportunités de backlinks qualifiés, analysez la santé de vos domaines
+    et construisez votre maillage sémantique — automatiquement.
+  </p>
+  <div class="cta-group">
+    <a href="https://shop.zenithlab.net" class="btn btn-primary">Accéder au dashboard</a>
+    <a href="#features" class="btn btn-outline">En savoir plus</a>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num">300+</div><div class="stat-label">PoPs Cloudflare</div></div>
+  <div class="stat"><div class="stat-num">7</div><div class="stat-label">Workers actifs</div></div>
+  <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Gratuit</div></div>
+  <div class="stat"><div class="stat-num">&lt;2s</div><div class="stat-label">Latence moyenne</div></div>
+</div>
+
+<hr>
+
+<section class="section" id="features">
+  <div class="section-label">Fonctionnalités</div>
+  <h2>Tout ce dont vous avez besoin</h2>
+  <p class="lead">Une infrastructure complète déployée sur Cloudflare Workers, sans serveur à gérer.</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-icon">🔭</div>
+      <h3>Radar</h3>
+      <p>Crawl furtif avec rotation d'empreinte. Découverte automatique de liens DoFollow sur tout domaine cible.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔗</div>
+      <h3>BacklinkHunter</h3>
+      <p>Extraction d'opportunités via Common Crawl. Scoring par profondeur, déduplication et filtrage du contenu pollué.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🩺</div>
+      <h3>DomainHealthChecker</h3>
+      <p>Audit complet : robots.txt, sitemap, redirections HTTPS, headers de sécurité. Score sur 100 points.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🛡️</div>
+      <h3>Sentinelle</h3>
+      <p>Surveillance continue. Détection de ban, rotation de proxys automatique, pause d'urgence si taux d'erreur > 10%.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Optimiseur</h3>
+      <p>Ajustement dynamique du rate limiting. Accélère quand tout va bien, ralentit en cas de dégradation.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🗂️</div>
+      <h3>Séquenceur</h3>
+      <p>Maillage automatique en silos sémantiques : e-commerce, marketing, tech, local. File de priorité intelligente.</p>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section class="section" id="how">
+  <div class="section-label">Fonctionnement</div>
+  <h2>Simple par design</h2>
+  <p class="lead">Quatre étapes, zéro infrastructure à maintenir.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h4>Cibler</h4>
+      <p>Ajoutez un domaine à analyser. Le Séquenceur priorise et alimente les workers.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h4>Crawler</h4>
+      <p>Radar et BacklinkHunter tournent toutes les 15 minutes depuis les 300+ PoPs Cloudflare.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h4>Filtrer</h4>
+      <p>Exclusion automatique du contenu pollué (casino, pharma, adulte). Seul le DoFollow qualifié remonte.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h4>Analyser</h4>
+      <p>Dashboard temps réel, logs de sécurité, métriques par silo — tout visible sur shop.zenithlab.net.</p>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section class="section" id="dashboard" style="padding-bottom:3rem;">
+  <div class="section-label">Dashboard</div>
+  <h2>Tout en un coup d'œil</h2>
+  <p class="lead">Métriques temps réel, statut des agents, alertes auto-pause et logs de sécurité.</p>
+  <a href="https://shop.zenithlab.net" class="btn btn-primary">Ouvrir le dashboard →</a>
+</section>
+
+<div style="max-width:1100px;margin:0 auto 5rem;padding:0 2rem;">
+  <div class="cta-section">
+    <h2>Prêt à automatiser votre SEO ?</h2>
+    <p>Infrastructure déjà déployée. Aucune configuration requise.</p>
+    <a href="https://shop.zenithlab.net" class="btn btn-primary">Accéder maintenant</a>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 Zenithlab. Infrastructure V35 sur Cloudflare Workers.</p>
+  <div style="display:flex;gap:1.5rem;">
+    <a href="/robots.txt">robots.txt</a>
+    <a href="/sitemap.xml">sitemap</a>
+    <a href="https://shop.zenithlab.net">Dashboard</a>
+  </div>
+</footer>
+
+</body>
+</html>
