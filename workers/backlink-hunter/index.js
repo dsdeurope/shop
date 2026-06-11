@@ -1,20 +1,19 @@
 /**
- * Worker: BacklinkHunter
- * Recherche d'opportunités de backlinks DoFollow qualifiés.
+ * Worker: BacklinkHunter v2
+ * Common Crawl + Wayback Machine + friction classification + storeSpot hash.
  */
 
 import { buildFetchOptions } from '../../lib/stealth.js';
-import { filterPolluted, scoreDomain } from '../../lib/seo.js';
+import { storeSpot } from '../../lib/hash.js';
+import { filterClean, loadBlacklist } from '../../lib/blacklist.js';
 import { logError } from '../../lib/logger.js';
 
 export default {
   async fetch(request, env) {
     const { domain } = await request.json().catch(() => ({}));
     if (!domain) return new Response('Missing domain', { status: 400 });
-
     try {
-      const backlinks = await huntBacklinks(domain, env);
-      return Response.json(backlinks);
+      return Response.json(await huntBacklinks(domain, env));
     } catch (err) {
       await logError(env, 'backlink-hunter', err.message, { domain });
       return Response.json({ error: err.message }, { status: 500 });
@@ -22,21 +21,14 @@ export default {
   },
 
   async scheduled(event, env) {
-    const queue = await getQueue(env);
+    const queue = JSON.parse(await env.KV.get('queue:backlink-hunter') || '[]');
     let errors = 0;
-
     for (const domain of queue) {
-      try {
-        await huntBacklinks(domain, env);
-      } catch {
-        errors++;
-      }
+      try { await huntBacklinks(domain, env); } catch { errors++; }
     }
-
-    const rate = queue.length ? errors / queue.length : 0;
-    if (rate > 0.1) {
+    if (queue.length && errors / queue.length > 0.1) {
       await env.LOGS.put(`alert:backlink-hunter:${Date.now()}`, JSON.stringify({
-        type: 'auto-pause', errorRate: rate, ts: new Date().toISOString(),
+        type: 'auto-pause', errorRate: errors / queue.length, ts: new Date().toISOString(),
       }));
     }
   },
@@ -44,34 +36,67 @@ export default {
 
 async function huntBacklinks(domain, env) {
   const { headers, cf } = buildFetchOptions(env.PROXY_LIST);
+  const blacklist = await loadBlacklist(env);
 
-  const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${domain}&output=json&limit=200`;
-  const resp = await fetch(ccUrl, { headers, cf });
-  const text = await resp.text();
+  // Common Crawl
+  const ccResp = await fetch(
+    `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${domain}&output=json&limit=200`,
+    { headers, cf }
+  );
+  const ccText = await ccResp.text();
+
+  // Wayback Machine CDX (vérifie l'ancienneté et l'existence réelle)
+  const wbResp = await fetch(
+    `https://web.archive.org/cdx/search/cdx?url=${domain}&output=json&limit=5&fl=timestamp,statuscode&filter=statuscode:200`,
+    { headers }
+  ).catch(() => null);
+  const wbData = wbResp?.ok ? await wbResp.json().catch(() => []) : [];
+  const waybackValidated = wbData.length > 1; // Au moins 2 snapshots = domaine établi
 
   const seen = new Set();
   const opportunities = [];
 
-  for (const line of text.split('\n').filter(Boolean)) {
+  for (const line of ccText.split('\n').filter(Boolean)) {
     try {
       const entry = JSON.parse(line);
-      const normalized = normalizeUrl(entry.url);
-      if (!normalized || seen.has(normalized)) continue;
-      seen.add(normalized);
+      const url = normalizeUrl(entry.url);
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
 
-      const score = scoreUrl(normalized);
-      if (score > 30) opportunities.push({ url: normalized, score, ts: entry.timestamp });
-    } catch { /* skip malformed */ }
+      if (!filterClean([url], blacklist).length) continue;
+
+      const score = scoreUrl(url, waybackValidated);
+      if (score > 30) {
+        opportunities.push({
+          url,
+          score,
+          domain,
+          friction: 'inconnu',
+          waybackValidated,
+          ts: entry.timestamp,
+        });
+      }
+    } catch { /* skip */ }
   }
 
-  const clean = filterPolluted(
-    opportunities.map(o => o.url),
-    ['casino', 'pharma', 'adult', 'gambling', 'porn', 'viagra'],
-  ).map(url => opportunities.find(o => o.url === url)).filter(Boolean);
+  opportunities.sort((a, b) => b.score - a.score);
+  const top = opportunities.slice(0, 50);
 
-  clean.sort((a, b) => b.score - a.score);
+  // Stocke chaque spot avec hash anti-doublon
+  let stored = 0;
+  for (const spot of top) {
+    const ok = await storeSpot(env, spot);
+    if (ok) stored++;
+  }
 
-  const result = { domain, total: clean.length, opportunities: clean.slice(0, 50), ts: new Date().toISOString() };
+  const result = {
+    domain,
+    waybackValidated,
+    total: opportunities.length,
+    stored,
+    opportunities: top,
+    ts: new Date().toISOString(),
+  };
   await env.KV.put(`backlinks:${domain}`, JSON.stringify(result));
   return result;
 }
@@ -79,7 +104,6 @@ async function huntBacklinks(domain, env) {
 function normalizeUrl(raw) {
   try {
     const u = new URL(raw);
-    // Supprime UTM, ref, tracking params
     ['utm_source','utm_medium','utm_campaign','utm_term','utm_content',
      'ref','_ga','gclid','fbclid','wvideo','affid','txnid'].forEach(p => u.searchParams.delete(p));
     u.pathname = u.pathname.replace(/\/+$/, '') || '/';
@@ -87,23 +111,19 @@ function normalizeUrl(raw) {
   } catch { return null; }
 }
 
-function scoreUrl(url) {
+function scoreUrl(url, waybackBonus = false) {
   let score = 40;
   try {
     const { hostname, pathname } = new URL(url);
     if (hostname.endsWith('.edu') || hostname.endsWith('.gov')) score += 40;
     else if (hostname.endsWith('.org')) score += 15;
-    // Pages profondes = contenu réel, meilleur potentiel
     const depth = pathname.split('/').filter(Boolean).length;
     if (depth >= 2) score += 10;
     if (depth >= 3) score += 5;
-    // Pénalité URLs avec trop de params résiduels
+    if (waybackBonus) score += 10; // domaine établi et indexé
     if (url.includes('?') && url.split('?')[1].length > 30) score -= 10;
+    // Bonus pages write-for-us / guest-post
+    if (/write.?for.?us|guest.?post|contribut|submit.?article/i.test(url)) score += 20;
   } catch { return 0; }
   return score;
-}
-
-async function getQueue(env) {
-  const raw = await env.KV.get('queue:backlink-hunter');
-  return raw ? JSON.parse(raw) : [];
 }
