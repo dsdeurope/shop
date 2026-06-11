@@ -1,0 +1,97 @@
+name: V35 Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm test
+
+  deploy-workers:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+
+      - name: Deploy Radar
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy workers/radar/index.js --name v35-radar
+        env:
+          PROXY_LIST: ${{ secrets.PROXY_LIST }}
+
+      - name: Deploy BacklinkHunter
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy workers/backlink-hunter/index.js --name v35-backlink-hunter
+
+      - name: Deploy DomainHealthChecker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy workers/domain-health-checker/index.js --name v35-domain-health
+
+      - name: Deploy Dashboard API
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy workers/dashboard-api/index.js --name v35-dashboard-api
+
+      - name: Deploy Sentinelle
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy agents/sentinelle/index.js --name v35-sentinelle
+
+      - name: Deploy Optimiseur
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy agents/optimiseur/index.js --name v35-optimiseur
+
+      - name: Deploy Sequenceur
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy agents/sequenceur/index.js --name v35-sequenceur
+
+  deploy-dashboard:
+    needs: deploy-workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Dashboard to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy dashboard/ --project-name shop-zenitlab --branch main
+
+      - name: Confirm deployment
+        run: |
+          echo "✅ Dashboard live: https://shop.zenitlab.net"
+          echo "✅ Workers deployed: radar, backlink-hunter, domain-health, dashboard-api"
+          echo "✅ Agents deployed: sentinelle, optimiseur, sequenceur"

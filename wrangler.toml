@@ -1,0 +1,57 @@
+name = "v35-shop"
+compatibility_date = "2024-10-01"
+main = "workers/radar/index.js"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Bindings KV — créer via: wrangler kv:namespace create "KV" && wrangler kv:namespace create "LOGS"
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+
+[[kv_namespaces]]
+binding = "LOGS"
+id = "REPLACE_WITH_LOGS_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_LOGS_PREVIEW_ID"
+
+# Secrets (jamais en dur) — déployer via: wrangler secret put PROXY_LIST
+# PROXY_LIST = JSON array de proxys: ["http://user:pass@host:port", ...]
+
+[triggers]
+crons = [
+  "*/15 * * * *",   # Radar & BacklinkHunter
+  "*/30 * * * *",   # DomainHealthChecker
+  "*/5 * * * *",    # Sentinelle
+  "*/10 * * * *",   # Optimiseur
+  "*/20 * * * *",   # Séquenceur
+]
+
+[[workers]]
+name = "v35-radar"
+main = "workers/radar/index.js"
+
+[[workers]]
+name = "v35-backlink-hunter"
+main = "workers/backlink-hunter/index.js"
+
+[[workers]]
+name = "v35-domain-health"
+main = "workers/domain-health-checker/index.js"
+
+[[workers]]
+name = "v35-dashboard-api"
+main = "workers/dashboard-api/index.js"
+
+[[workers]]
+name = "v35-sentinelle"
+main = "agents/sentinelle/index.js"
+
+[[workers]]
+name = "v35-optimiseur"
+main = "agents/optimiseur/index.js"
+
+[[workers]]
+name = "v35-sequenceur"
+main = "agents/sequenceur/index.js"

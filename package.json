@@ -1,0 +1,16 @@
+{
+  "name": "v35-shop-zenitlab",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev:radar": "wrangler dev workers/radar/index.js --name v35-radar",
+    "dev:dashboard": "wrangler dev workers/dashboard-api/index.js --name v35-dashboard-api",
+    "deploy": "wrangler deploy",
+    "test": "node --test tests/**/*.test.js",
+    "kv:setup": "wrangler kv:namespace create KV && wrangler kv:namespace create LOGS",
+    "secret:proxies": "wrangler secret put PROXY_LIST"
+  },
+  "devDependencies": {
+    "wrangler": "^3.60.0"
+  }
+}
