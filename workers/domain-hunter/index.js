@@ -115,55 +115,76 @@ async function huntDomains(niche, env) {
   return report;
 }
 
-// ─── Candidats depuis KV existant + Common Crawl (avec fallback) ─────────────
+// ─── Candidats depuis Common Crawl — niche-aware ────────────────────────────
 async function findCandidatesFromCrawl(niche, env) {
   const candidates = new Set();
-  const SKIP = new Set(['github.com','google.com','youtube.com','facebook.com','twitter.com','linkedin.com','amazon.com','wikipedia.org']);
+  const SKIP = new Set([
+    'github.com','google.com','youtube.com','facebook.com','twitter.com','x.com',
+    'linkedin.com','amazon.com','wikipedia.org','shopify.com','woocommerce.com',
+    'wordpress.com','wordpress.org','ahrefs.com','semrush.com','moz.com',
+    'brightlocal.com','agencyspotter.com','wordcount.com',
+  ]);
 
-  // Source 1 — domaines déjà dans les backlinks KV
-  const blKeys = await env.KV.list({ prefix: 'backlinks:' });
-  for (const k of blKeys.keys) {
-    const data = await env.KV.get(k.name).then(v => v ? JSON.parse(v) : null);
-    if (!data?.opportunities) continue;
-    for (const opp of data.opportunities.slice(0, 10)) {
-      try {
-        const host = new URL(opp.url).hostname.replace(/^www\./, '');
-        if (!SKIP.has(host)) candidates.add(host);
-      } catch { /* skip */ }
-    }
+  const { headers } = buildFetchOptions(env.PROXY_LIST);
+
+  // Patterns Common Crawl spécifiques à chaque niche
+  const CC_PATTERNS = {
+    ecommerce: [
+      'url=*/products/*&output=json&limit=50',           // Shopify /products/
+      'url=*/collections/*&output=json&limit=50',        // Shopify /collections/
+      'url=*/product-category/*&output=json&limit=30',   // WooCommerce
+      'url=*/catalog/product/*&output=json&limit=30',    // Magento/PrestaShop
+    ],
+    seo_blog: [
+      'url=*/blog/seo/*&output=json&limit=40',
+      'url=*/category/seo/*&output=json&limit=40',
+    ],
+    local_seo: [
+      'url=*/nos-agences/*&output=json&limit=40',
+      'url=*/location/*&output=json&limit=40',
+    ],
+    marketing_agency: [
+      'url=*/case-studies/*&output=json&limit=40',
+      'url=*/services/*&output=json&limit=40',
+    ],
+  };
+
+  const patterns = CC_PATTERNS[niche] || CC_PATTERNS.seo_blog;
+
+  for (const pat of patterns.slice(0, 2)) {
+    try {
+      const resp = await fetch(
+        `https://index.commoncrawl.org/CC-MAIN-2024-10-index?${pat}`,
+        { headers, signal: AbortSignal.timeout(8000) }
+      );
+      const text = await resp.text();
+      for (const line of text.split('\n').filter(Boolean)) {
+        try {
+          const entry = JSON.parse(line);
+          const host = new URL(entry.url).hostname.replace(/^www\./, '');
+          // Filtre domaines génériques / trop connus
+          if (!SKIP.has(host) && !host.endsWith('.shopify.com') && !host.endsWith('.myshopify.com')) {
+            candidates.add(host);
+          }
+        } catch { /* skip */ }
+      }
+    } catch { /* fallback */ }
   }
 
-  // Source 2 — liens découverts par le Radar
-  const radarKeys = await env.KV.list({ prefix: 'radar:' });
-  for (const k of radarKeys.keys) {
-    const data = await env.KV.get(k.name).then(v => v ? JSON.parse(v) : null);
-    if (!data?.links) continue;
-    for (const link of data.links.slice(0, 20)) {
-      try {
-        const host = new URL(link).hostname.replace(/^www\./, '');
-        if (!SKIP.has(host) && host !== new URL(data.target).hostname) candidates.add(host);
-      } catch { /* skip */ }
-    }
-  }
-
-  // Source 3 — Common Crawl sur un pattern niche (rapide, 1 seule requête)
+  // Source secondaire — backlinks KV filtrés par niche
   try {
-    const nicheFp = NICHE_FOOTPRINTS[niche];
-    const pattern = (nicheFp?.urlPatterns || ['/blog/'])[0].replace(/\//g, '');
-    const { headers } = buildFetchOptions(env.PROXY_LIST);
-    const resp = await fetch(
-      `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*/${pattern}/*&output=json&limit=30`,
-      { headers, signal: AbortSignal.timeout(8000) }
-    );
-    const text = await resp.text();
-    for (const line of text.split('\n').filter(Boolean)) {
-      try {
-        const entry = JSON.parse(line);
-        const host = new URL(entry.url).hostname.replace(/^www\./, '');
-        if (!SKIP.has(host)) candidates.add(host);
-      } catch { /* skip */ }
+    const blKeys = await env.KV.list({ prefix: `backlinks:${niche}:` });
+    for (const k of blKeys.keys.slice(0, 5)) {
+      const data = await env.KV.get(k.name).then(v => v ? JSON.parse(v) : null);
+      if (!data?.opportunities) continue;
+      for (const opp of data.opportunities.slice(0, 8)) {
+        try {
+          const host = new URL(opp.url).hostname.replace(/^www\./, '');
+          if (!SKIP.has(host)) candidates.add(host);
+        } catch { /* skip */ }
+      }
     }
-  } catch { /* fallback OK */ }
+  } catch { /* skip */ }
 
   return [...candidates].slice(0, 40);
 }
