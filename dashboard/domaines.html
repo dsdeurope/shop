@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V35 — Domain Hunter</title>
+  <style>
+    :root {
+      --bg: #0d0d0d; --surface: #1a1a1a; --border: #2a2a2a;
+      --green: #00ff88; --yellow: #ffd700; --orange: #ff8c00;
+      --red: #ff4444; --blue: #4488ff; --grey: #555; --text: #e0e0e0; --muted: #666;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; }
+
+    header {
+      padding: .8rem 2rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .logo { color: var(--orange); font-size: 1.1rem; font-weight: bold; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .85rem; margin-left: 1.5rem; }
+    nav a:hover, nav a.active { color: var(--text); }
+    .refresh-btn {
+      margin-left: auto; padding: .4rem 1rem; background: var(--orange);
+      color: #000; border: none; border-radius: 6px; cursor: pointer;
+      font-size: .8rem; font-weight: bold;
+    }
+    .refresh-btn:hover { opacity: .85; }
+
+    .controls {
+      display: flex; gap: 1rem; padding: 1rem 2rem; flex-wrap: wrap; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .controls label { font-size: .8rem; color: var(--muted); }
+    select {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      padding: .35rem .8rem; border-radius: 6px; font-size: .85rem;
+    }
+    .leader-input {
+      display: flex; gap: .5rem; align-items: center;
+    }
+    input[type=text] {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      padding: .35rem .8rem; border-radius: 6px; font-size: .85rem; width: 280px;
+    }
+    .analyze-btn {
+      padding: .35rem .9rem; background: var(--blue); color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; font-size: .8rem; font-weight: bold;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex; gap: 1.5rem; padding: 1rem 2rem; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.6rem; font-weight: bold; }
+    .stat-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    /* Table */
+    .table-wrap { padding: 0 2rem 2rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th {
+      text-align: left; padding: .6rem 1rem; color: var(--muted);
+      font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+    }
+    th:hover { color: var(--text); }
+    td { padding: .7rem 1rem; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
+    tr:hover td { background: #111; }
+
+    /* Diodes */
+    .diode {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 12px; font-size: .7rem; font-weight: bold;
+    }
+    .diode::before { content:''; width:7px; height:7px; border-radius:50%; }
+    .diode.orange { background: rgba(255,140,0,.15); color: var(--orange); border: 1px solid var(--orange); }
+    .diode.orange::before { background: var(--orange); animation: blink 1s infinite; }
+    .diode.yellow { background: rgba(255,215,0,.1); color: var(--yellow); border: 1px solid var(--yellow); }
+    .diode.yellow::before { background: var(--yellow); }
+    .diode.green { background: rgba(0,255,136,.08); color: var(--green); border: 1px solid var(--green); }
+    .diode.green::before { background: var(--green); }
+    .diode.blue { background: rgba(68,136,255,.1); color: var(--blue); border: 1px solid var(--blue); }
+    .diode.blue::before { background: var(--blue); }
+    .diode.grey { background: rgba(85,85,85,.2); color: var(--grey); border: 1px solid var(--grey); }
+    .diode.grey::before { background: var(--grey); }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+
+    /* Score bar */
+    .score-bar {
+      width: 80px; height: 6px; background: var(--border); border-radius: 3px; display: inline-block;
+      position: relative; vertical-align: middle;
+    }
+    .score-fill {
+      height: 100%; border-radius: 3px; position: absolute; top: 0; left: 0;
+    }
+
+    .avail-badge {
+      padding: 2px 8px; border-radius: 10px; font-size: .68rem; font-weight: bold;
+    }
+    .avail-disponible { background: rgba(0,255,136,.1); color: var(--green); }
+    .avail-parké { background: rgba(255,215,0,.1); color: var(--yellow); }
+    .avail-expiré { background: rgba(255,140,0,.1); color: var(--orange); }
+    .avail-abandonné { background: rgba(255,68,68,.1); color: var(--red); }
+    .avail-actif { background: rgba(68,136,255,.1); color: var(--blue); }
+    .avail-inconnu { background: rgba(85,85,85,.2); color: var(--grey); }
+
+    .wb { font-size: .75rem; color: var(--muted); }
+    .wb.ok { color: var(--green); }
+
+    .empty { text-align: center; padding: 4rem; color: var(--muted); }
+    .loading { text-align: center; padding: 2rem; color: var(--muted); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:.5;} 50%{opacity:1;} }
+
+    .hunt-btn {
+      padding: .35rem .9rem; background: var(--orange); color: #000;
+      border: none; border-radius: 6px; cursor: pointer; font-size: .8rem; font-weight: bold;
+    }
+
+    /* Dorks panel */
+    .dorks-panel {
+      margin: 0 2rem 1rem; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem;
+    }
+    .dorks-title { font-size: .7rem; color: var(--muted); text-transform: uppercase; margin-bottom: .6rem; letter-spacing: .06em; }
+    .dork { font-size: .75rem; color: var(--blue); margin-bottom: .3rem; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">⬡ V35 — Domain Hunter</span>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/domaines.html" class="active">Domaines</a>
+  </nav>
+  <button class="refresh-btn" onclick="loadReport()">↻ Actualiser</button>
+</header>
+
+<div class="controls">
+  <div>
+    <label>Niche </label>
+    <select id="nicheSelect" onchange="onNicheChange()">
+      <option value="seo_blog">SEO Blog</option>
+      <option value="ecommerce">E-commerce</option>
+      <option value="local_seo">Local SEO</option>
+      <option value="marketing_agency">Agence Marketing</option>
+    </select>
+  </div>
+  <div class="leader-input">
+    <label>Analyser un leader : </label>
+    <input type="text" id="leaderUrl" placeholder="https://backlinko.com" />
+    <button class="analyze-btn" onclick="analyzeLeader()">Analyser</button>
+  </div>
+  <button class="hunt-btn" onclick="triggerHunt()">🎯 Lancer la chasse</button>
+  <span id="statusMsg" style="font-size:.8rem;color:var(--muted)"></span>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat"><div class="stat-num" id="sTotal" style="color:var(--orange)">—</div><div class="stat-label">Opportunités</div></div>
+  <div class="stat"><div class="stat-num" id="sAlerte" style="color:var(--orange)">—</div><div class="stat-label">Alertes achat</div></div>
+  <div class="stat"><div class="stat-num" id="sDisponible" style="color:var(--green)">—</div><div class="stat-label">Disponibles</div></div>
+  <div class="stat"><div class="stat-num" id="sParked" style="color:var(--yellow)">—</div><div class="stat-label">Parkés/Expirés</div></div>
+  <div class="stat"><div class="stat-num" id="sFpAvg" style="color:var(--blue)">—</div><div class="stat-label">Score FP moyen</div></div>
+</div>
+
+<div id="dorksPanel" class="dorks-panel" style="display:none">
+  <div class="dorks-title">Dorks générés pour la niche</div>
+  <div id="dorksList"></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('diode.priority')">Diode ↕</th>
+        <th onclick="sortBy('domain')">Domaine ↕</th>
+        <th onclick="sortBy('fpScore')">Footprint ↕</th>
+        <th onclick="sortBy('totalScore')">Score total ↕</th>
+        <th onclick="sortBy('availability')">Disponibilité ↕</th>
+        <th>Wayback</th>
+        <th>Niche</th>
+        <th>Raison</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="8" class="loading">Chargement...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const API = 'https://v35-domain-hunter.ernestpedanou.workers.dev';
+  let allData = [];
+  let sortKey = 'diode.priority';
+  let sortAsc = true;
+
+  function onNicheChange() {
+    const niche = document.getElementById('nicheSelect').value;
+    loadNicheReport(niche);
+  }
+
+  async function loadReport() {
+    setStatus('Chargement...');
+    try {
+      const r = await fetch(`${API}?action=report`);
+      const d = await r.json();
+      allData = d.opportunities || [];
+      renderTable(allData);
+      renderStats(allData);
+      setStatus(`Mis à jour: ${new Date().toLocaleTimeString('fr-FR')}`);
+    } catch (e) {
+      setStatus('Erreur API');
+    }
+  }
+
+  async function loadNicheReport(niche) {
+    const r = await fetch(`${API}?action=report`);
+    const d = await r.json();
+    allData = (d.opportunities || []).filter(o => !niche || o.niche === niche);
+    renderTable(allData);
+    renderStats(allData);
+  }
+
+  async function analyzeLeader() {
+    const url = document.getElementById('leaderUrl').value.trim();
+    const niche = document.getElementById('nicheSelect').value;
+    if (!url) return;
+    setStatus('Analyse en cours...');
+    try {
+      const r = await fetch(`${API}?action=analyze&leader=${encodeURIComponent(url)}&niche=${niche}`);
+      const d = await r.json();
+      if (d.dorks?.length) {
+        document.getElementById('dorksPanel').style.display = 'block';
+        document.getElementById('dorksList').innerHTML = d.dorks
+          .map(dk => `<div class="dork">→ ${dk}</div>`).join('');
+      }
+      setStatus(`Leader analysé ✓ — Match score: ${d.matchScore}% — ${d.dorks?.length || 0} dorks générés`);
+    } catch (e) {
+      setStatus('Erreur analyse');
+    }
+  }
+
+  async function triggerHunt() {
+    const niche = document.getElementById('nicheSelect').value;
+    setStatus('Chasse en cours...');
+    try {
+      const r = await fetch(`${API}?niche=${niche}`);
+      const d = await r.json();
+      allData = d.opportunities || [];
+      renderTable(allData);
+      renderStats(allData);
+      setStatus(`Chasse terminée — ${d.total} opportunités trouvées`);
+    } catch (e) {
+      setStatus('Erreur chasse');
+    }
+  }
+
+  function renderStats(data) {
+    document.getElementById('sTotal').textContent = data.length;
+    document.getElementById('sAlerte').textContent = data.filter(d => d.diode?.color === 'orange').length;
+    document.getElementById('sDisponible').textContent = data.filter(d => d.availability === 'disponible').length;
+    document.getElementById('sParked').textContent = data.filter(d => ['parké','expiré'].includes(d.availability)).length;
+    const fpAvg = data.length ? Math.round(data.reduce((s,d) => s + (d.fpScore||0), 0) / data.length) : 0;
+    document.getElementById('sFpAvg').textContent = fpAvg + '%';
+  }
+
+  function renderTable(data) {
+    const sorted = [...data].sort((a, b) => {
+      const va = getNestedVal(a, sortKey), vb = getNestedVal(b, sortKey);
+      return sortAsc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+    });
+
+    const body = document.getElementById('tableBody');
+    if (!sorted.length) {
+      body.innerHTML = '<tr><td colspan="8" class="empty">Aucune opportunité — analysez un leader puis lancez la chasse.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = sorted.map(d => {
+      const avail = d.availability || 'inconnu';
+      const fpPct = d.fpScore || 0;
+      const fpColor = fpPct >= 70 ? '#ff8c00' : fpPct >= 40 ? '#ffd700' : '#4488ff';
+      const wb = d.wayback || {};
+      return `<tr>
+        <td><span class="diode ${d.diode?.color || 'grey'}">${d.diode?.verdict || '—'}</span></td>
+        <td><strong>${d.domain}</strong></td>
+        <td>
+          <span style="color:${fpColor};font-weight:bold">${fpPct}%</span>
+          <span class="score-bar"><span class="score-fill" style="width:${fpPct}%;background:${fpColor}"></span></span>
+        </td>
+        <td><span style="color:var(--text)">${d.totalScore || 0}/100</span></td>
+        <td><span class="avail-badge avail-${avail}">${avail}</span></td>
+        <td><span class="wb ${wb.validated ? 'ok' : ''}">${wb.validated ? `✓ ${wb.snapshots} snaps` : wb.snapshots ? `${wb.snapshots} snaps` : '—'}</span></td>
+        <td><span style="font-size:.75rem;color:var(--muted)">${d.niche || '—'}</span></td>
+        <td><span style="font-size:.72rem;color:var(--muted)">${d.diode?.reason || '—'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function sortBy(key) {
+    if (sortKey === key) sortAsc = !sortAsc;
+    else { sortKey = key; sortAsc = true; }
+    renderTable(allData);
+  }
+
+  function getNestedVal(obj, path) {
+    return path.split('.').reduce((o, k) => o?.[k], obj) ?? '';
+  }
+
+  function setStatus(msg) {
+    document.getElementById('statusMsg').textContent = msg;
+  }
+
+  loadReport();
+  setInterval(loadReport, 60000);
+</script>
+</body>
+</html>
