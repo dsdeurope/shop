@@ -7,28 +7,33 @@
 import { buildFetchOptions, buildStealthHeaders } from '../../lib/stealth.js';
 import { extractFullFootprint, matchFootprint, isParked, isParkingIp, NICHE_FOOTPRINTS } from '../../lib/footprint-patterns.js';
 import { isPolluted, addToBlacklist } from '../../lib/blacklist.js';
-import { isDuplicate } from '../../lib/hash.js';
 import { logError, logInfo } from '../../lib/logger.js';
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,OPTIONS',
+  'Content-Type': 'application/json',
+};
 
 export default {
   async fetch(request, env) {
+    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || 'hunt';
     const niche = url.searchParams.get('niche') || 'seo_blog';
     const leaderUrl = url.searchParams.get('leader');
 
+    const json = (data, status = 200) =>
+      new Response(JSON.stringify(data), { status, headers: CORS });
+
     try {
-      if (action === 'analyze' && leaderUrl) {
-        return Response.json(await analyzeLeader(leaderUrl, niche, env));
-      }
-      if (action === 'report') {
-        return Response.json(await getReport(env));
-      }
-      const result = await huntDomains(niche, env);
-      return Response.json(result);
+      if (action === 'analyze' && leaderUrl) return json(await analyzeLeader(leaderUrl, niche, env));
+      if (action === 'report') return json(await getReport(env));
+      return json(await huntDomains(niche, env));
     } catch (err) {
       await logError(env, 'domain-hunter', err.message, { action, niche });
-      return Response.json({ error: err.message }, { status: 500 });
+      return json({ error: err.message }, 500);
     }
   },
 
@@ -77,7 +82,11 @@ async function huntDomains(niche, env) {
 
   const opportunities = [];
   for (const candidate of candidates) {
-    if (await isDuplicate(env, `hunt:${candidate}`)) continue;
+    // Dédup léger 24h (sans écriture automatique comme isDuplicate)
+    const seenKey = `hseen2:${candidate}`;
+    if (await env.KV.get(seenKey)) continue;
+    await env.KV.put(seenKey, '1', { expirationTtl: 3600 });
+
     if (isPolluted(`https://${candidate}`)) continue;
 
     const result = await assessDomain(candidate, leaderFps, niche, env);
@@ -278,11 +287,18 @@ function computeHuntScore(fpScore, wayback, availability) {
 }
 
 function computeDiode(fpScore, availability, wayback, totalScore) {
-  // Règle d'or : footprint parfait + disponible/expiré = ORANGE ALERTE
-  if (fpScore >= 70 && ['disponible', 'parké', 'expiré'].includes(availability) && wayback.validated) {
-    return { color: 'orange', verdict: 'ALERTE ACHAT', priority: 1, reason: `Footprint ${fpScore}% match + ${availability} + historique validé` };
+  const acquirable = ['disponible', 'parké', 'expiré', 'potentiellement_disponible', 'abandonné'];
+  const isAcquirable = acquirable.includes(availability);
+
+  // Domaine parké/expiré/libre avec historique validé = opportunité d'achat directe
+  if (isAcquirable && wayback.validated && wayback.snapshots >= 3) {
+    if (fpScore >= 40) {
+      return { color: 'orange', verdict: 'ALERTE ACHAT', priority: 1, reason: `${availability} + Wayback ${wayback.snapshots} snaps + fp ${fpScore}%` };
+    }
+    return { color: 'yellow', verdict: 'À ANALYSER', priority: 2, reason: `${availability} + Wayback ${wayback.snapshots} snaps` };
   }
-  if (fpScore >= 50 && availability !== 'actif' && wayback.validated) {
+  // Footprint fort + non-actif = à analyser
+  if (fpScore >= 50 && isAcquirable) {
     return { color: 'yellow', verdict: 'À ANALYSER', priority: 2, reason: `Footprint ${fpScore}% + ${availability}` };
   }
   if (availability === 'disponible' && wayback.validated) {
