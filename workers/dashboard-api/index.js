@@ -15,16 +15,25 @@ export default {
       'Content-Type': 'application/json',
     };
 
-    if (url.pathname !== '/api/dashboard') {
-      return new Response('Not found', { status: 404 });
+    if (url.pathname === '/api/dashboard') {
+      try {
+        const data = await aggregateDashboard(env);
+        return new Response(JSON.stringify(data), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+      }
     }
 
-    try {
-      const data = await aggregateDashboard(env);
-      return new Response(JSON.stringify(data), { headers: corsHeaders });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    if (url.pathname === '/api/spots') {
+      try {
+        const data = await aggregateSpots(env);
+        return new Response(JSON.stringify(data), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+      }
     }
+
+    return new Response('Not found', { status: 404 });
   },
 };
 
@@ -83,6 +92,11 @@ async function aggregateDashboard(env) {
   const errorLogs = recentLogs.filter(l => l.level === 'error');
   const errorRate = recentLogs.length ? errorLogs.length / recentLogs.length : 0;
 
+  // Spots count
+  const spotKeys = await env.KV.list({ prefix: 'spot:' });
+  const totalSpots = spotKeys.keys.length;
+  const dofollowSpots = 0; // computed lazily in aggregateSpots
+
   return {
     domainsDiscovered: radarKeys.keys.length,
     backlinksFound: totalBacklinks,
@@ -93,6 +107,30 @@ async function aggregateDashboard(env) {
     agentStatuses,
     recentLogs: recentLogs.slice(-20),
     securityEvents: securityLog.split('\n').filter(Boolean).slice(-5),
+    spotsTotal: totalSpots,
     ts: new Date().toISOString(),
   };
+}
+
+async function aggregateSpots(env) {
+  const spotKeys = await env.KV.list({ prefix: 'spot:' });
+  const spots = [];
+  for (const k of spotKeys.keys.slice(0, 500)) {
+    const raw = await env.KV.get(k.name);
+    if (!raw) continue;
+    try {
+      const s = JSON.parse(raw);
+      spots.push({
+        url: s.url,
+        domain: s.domain,
+        type: s.type || 'blog',
+        friction: s.friction || 'libre',
+        dofollow: s.dofollow ?? false,
+        anchor: s.anchor || '',
+        ts: s.ts || null,
+      });
+    } catch { /* skip corrupt */ }
+  }
+  spots.sort((a, b) => (b.ts || '') < (a.ts || '') ? -1 : 1);
+  return { total: spots.length, spots };
 }
