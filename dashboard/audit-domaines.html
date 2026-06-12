@@ -133,7 +133,7 @@
 <div id="scModal" class="sc-overlay" onclick="closeSc()">
   <div class="sc-box" onclick="event.stopPropagation()">
     <div class="sc-head">
-      <span>🔬 Analyse — <span id="scDomain" style="color:var(--blue)"></span></span>
+      <span>⚙ Configuration du Scraping : <span id="scDomain" style="color:var(--blue)"></span></span>
       <button onclick="closeSc()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.4rem;padding:0">×</button>
     </div>
     <div id="scBody" class="sc-body"></div>
@@ -451,7 +451,7 @@ let _bp=null;
 
 async function openScraper(domain){
   document.getElementById('scDomain').textContent=domain;
-  document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Scraping en cours…</div>';
+  document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Analyse en cours…</div>';
   document.getElementById('scModal').classList.add('open');
   let cols;
   try{cols=await tryShopify(domain);if(!cols){const html=await proxyFetch(`https://${domain}`);cols=parseCollections(html,domain);}}
@@ -459,21 +459,11 @@ async function openScraper(domain){
   const total=cols.length,mvp=mvpN(total),top=cols.slice(0,mvp);
   _bp={source:domain,scrapedAt:new Date().toISOString(),totalCollections:total,mvpCollections:mvp,mvpSelection:top,allCollections:cols,shopify_hint:'Admin > Products > Collections',woo_hint:'Products > Categories'};
   const pct=total?Math.round(mvp/total*100):0;
-  document.getElementById('scBody').innerHTML=`
-    <div class="sc-stat">
-      <div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Collections</div></div>
-      <div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">MVP recommandé</div></div>
-      <div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div>
-    </div>
-    <p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">Lancer <strong style="color:var(--green)">${mvp} collections</strong> sur ${total} pour valider le marché.</p>
-    <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Top ${mvp} à cloner</p>
-    <ul class="sc-list">${top.map((c,i)=>`<li><span class="sc-idx">#${i+1}</span><span>${c.title||c.path.split('/').pop().replace(/-/g,' ')}</span><span class="sc-path">${c.path}</span></li>`).join('')}</ul>
-    <div class="sc-actions">
-      <button class="btn-dl" onclick="dlBP()">⬇ blueprint.json</button>
-      <button class="btn-deploy" onclick="deployAct('${domain}')">🚀 Lancer déploiement</button>
-    </div>`;
+  document.getElementById('scBody').innerHTML=`<div class="sc-stat"><div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Inventaire</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">Potentiel rentable</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div></div><p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.2rem 0 .5rem">Prévisualisation — collections détectées</p><ul class="sc-list" id="scColList">${cols.map((c,i)=>`<li><input type="checkbox" id="col${i}" ${i<mvp?'checked':''}><label for="col${i}" style="flex:1;cursor:pointer;font-size:.75rem;margin-left:.4rem">${c.title||c.path.split('/').pop().replace(/-/g,' ')}</label><span class="sc-path">${c.path}</span></li>`).join('')}</ul><div class="sc-actions"><div style="display:flex;align-items:center;gap:.6rem;flex:1;flex-wrap:wrap"><label style="font-size:.78rem;color:var(--muted)">Collections à cloner :</label><input type="number" id="scCloneN" value="${mvp}" min="1" max="${total}" style="width:58px;background:#0d0d0d;border:1px solid var(--border);color:var(--text);padding:.3rem .5rem;border-radius:6px;font-size:.82rem" onchange="updateChecks(this.value,${total})"><span style="font-size:.72rem;color:var(--muted)">Recommandé : <strong style="color:var(--green)">${mvp}</strong></span></div><button class="btn-deploy" onclick="launchExtraction()">🚀 Lancer l'extraction</button><button class="btn-dl" onclick="dlBP()">⬇ blueprint.json</button></div>`;
 }
 function closeSc(){document.getElementById('scModal').classList.remove('open');}
+function updateChecks(n,total){const v=Math.max(1,Math.min(+n||1,total));document.getElementById('scCloneN').value=v;document.querySelectorAll('#scColList input[type=checkbox]').forEach((cb,i)=>cb.checked=i<v);}
+function launchExtraction(){if(!_bp)return;const sel=[];document.querySelectorAll('#scColList input[type=checkbox]:checked').forEach(cb=>{const i=+cb.id.replace('col','');if(_bp.allCollections[i])sel.push(_bp.allCollections[i]);});_bp.mvpSelection=sel;_bp.mvpCollections=sel.length;dlBP();showToast(`${sel.length} collection${sel.length>1?'s':''} extraite${sel.length>1?'s':''}`);}
 function dlBP(){if(!_bp)return;const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(_bp,null,2)],{type:'application/json'})),download:`blueprint-${_bp.source}.json`});a.click();URL.revokeObjectURL(a.href);}
 function deployAct(src){const t=allAcq[0]?.domain;showToast(t?`${src} → ${t}`:'Aucun domaine acquisition');if(t)window.open(REGISTRAR+t,'_blank');}
 async function openAlts(domain){
