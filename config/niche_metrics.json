@@ -1,0 +1,15 @@
+{
+  "Lingerie":    {"CR": 0.028, "AOV": 58,  "note": "Forte intention d'achat, retours élevés"},
+  "Mode Femme":  {"CR": 0.022, "AOV": 72,  "note": "Saisonnalité forte"},
+  "Mode Homme":  {"CR": 0.018, "AOV": 85,  "note": "Moins impulsif"},
+  "Luminaires":  {"CR": 0.015, "AOV": 145, "note": "Achat réfléchi"},
+  "Décoration":  {"CR": 0.014, "AOV": 110, "note": "Panier élevé, conversion lente"},
+  "Beauté":      {"CR": 0.025, "AOV": 48,  "note": "Récurrence élevée"},
+  "Sport":       {"CR": 0.020, "AOV": 95,  "note": "Saisonnalité printemps/été"},
+  "Bijoux":      {"CR": 0.018, "AOV": 120, "note": "Cadeaux = pics fêtes"},
+  "Enfants":     {"CR": 0.022, "AOV": 65,  "note": "Forte récurrence"},
+  "Alimentaire": {"CR": 0.030, "AOV": 38,  "note": "Haute fréquence, panier bas"},
+  "Animaux":     {"CR": 0.025, "AOV": 42,  "note": "Très récurrent"},
+  "Auto":        {"CR": 0.012, "AOV": 180, "note": "Achat technique, trafic intent fort"},
+  "default":     {"CR": 0.018, "AOV": 50,  "note": "E-commerce générique"}
+}
