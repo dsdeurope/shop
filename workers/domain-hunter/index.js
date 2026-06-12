@@ -381,14 +381,27 @@ function generateDorks(fp, niche, leaderUrl) {
   return dorks.slice(0, 8);
 }
 
+const SKIP_ROOTS_MERGE = new Set([
+  'github.com','google.com','youtube.com','facebook.com','twitter.com','x.com',
+  'linkedin.com','amazon.com','wikipedia.org','shopify.com','woocommerce.com',
+  'wordpress.com','wordpress.org','ahrefs.com','semrush.com','moz.com',
+  'brightlocal.com','agencyspotter.com','wordcount.com','aliexpress.com',
+  'amazon.fr','cdiscount.com','leboncoin.fr','ebay.fr',
+  'cloudflare.com','backlinko.com','wikimonde.com','searchengineland.com',
+  'neilpatel.com','hubspot.com','stripe.com','paypal.com','klarna.com',
+]);
+const isPollutedDomain = h => SKIP_ROOTS_MERGE.has(h) || [...SKIP_ROOTS_MERGE].some(r => h.endsWith('.'+r));
+
 async function mergeGlobalReport(env, niche, opportunities) {
   const key = 'domains:report';
   const existing = JSON.parse(await env.KV.get(key) || '{"opportunities":[]}');
-  // Merge within niche (keep best, deduplicate by domain)
+  // Merge within niche — dedup + purge polluted domains
   const newByDomain = Object.fromEntries(opportunities.map(o => [o.domain, o]));
-  const existingNiche = existing.opportunities.filter(o => o.niche === niche && !newByDomain[o.domain]);
+  const existingNiche = existing.opportunities.filter(o =>
+    o.niche === niche && !newByDomain[o.domain] && !isPollutedDomain(o.domain)
+  );
   const merged = [
-    ...existing.opportunities.filter(o => o.niche !== niche),
+    ...existing.opportunities.filter(o => o.niche !== niche && !isPollutedDomain(o.domain)),
     ...existingNiche,
     ...opportunities,
   ].sort((a, b) => (a.diode?.priority || 9) - (b.diode?.priority || 9));
