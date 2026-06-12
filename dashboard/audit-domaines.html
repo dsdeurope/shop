@@ -155,6 +155,7 @@
 if(sessionStorage.getItem('v35_auth')!=='c0e1ef644e74252419e56e7818885cbeaf7bd35bec04b0dfda954678e4f16354')location.replace('/login.html?r='+encodeURIComponent(location.pathname));
 const API_HUNTER='https://v35-domain-hunter.ernestpedanou.workers.dev';
 const API_SEQ='https://v35-sequenceur.ernestpedanou.workers.dev';
+const API_FACTORY='https://v35-site-factory.ernestpedanou.workers.dev';
 const REGISTRAR='https://www.ovh.com/fr/domaines/?domain=';
 let allProsp=[],allAcq=[],nicheF=null;
 // ── Niche data ──
@@ -455,9 +456,49 @@ async function openScraper(domain){
   const total=cols.length,mvp=mvpN(total),top=cols.slice(0,mvp);
   _bp={source:domain,scrapedAt:new Date().toISOString(),totalCollections:total,mvpCollections:mvp,mvpSelection:top,allCollections:cols,shopify_hint:'Admin > Products > Collections',woo_hint:'Products > Categories'};
   const pct=total?Math.round(mvp/total*100):0;
-  document.getElementById('scBody').innerHTML=`<div class="sc-stat"><div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Inventaire</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">Potentiel rentable</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div></div><p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.2rem 0 .5rem">Prévisualisation — collections détectées</p><ul class="sc-list" id="scColList">${cols.map((c,i)=>`<li><input type="checkbox" id="col${i}" ${i<mvp?'checked':''}><label for="col${i}" style="flex:1;cursor:pointer;font-size:.75rem;margin-left:.4rem">${c.title||c.path.split('/').pop().replace(/-/g,' ')}</label>${c.products!=null?`<span style="font-size:.63rem;color:var(--green);font-weight:600;white-space:nowrap">${c.products} prod.</span>`:''}<span class="sc-path">${c.path}</span></li>`).join('')}</ul><div class="sc-actions"><div style="display:flex;align-items:center;gap:.6rem;flex:1;flex-wrap:wrap"><label style="font-size:.78rem;color:var(--muted)">Collections à cloner :</label><input type="number" id="scCloneN" value="${mvp}" min="1" max="${total}" style="width:58px;background:#0d0d0d;border:1px solid var(--border);color:var(--text);padding:.3rem .5rem;border-radius:6px;font-size:.82rem" onchange="updateChecks(this.value,${total})"><span style="font-size:.72rem;color:var(--muted)">Recommandé : <strong style="color:var(--green)">${mvp}</strong></span></div><button class="btn-deploy" onclick="launchExtraction()">🚀 Lancer l'extraction</button><button class="btn-dl" onclick="dlBP()">⬇ blueprint.json</button></div>`;
+  document.getElementById('scBody').innerHTML=`<div class="sc-stat"><div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Inventaire</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">Potentiel rentable</div></div><div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div></div><p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.2rem 0 .5rem">Prévisualisation — collections détectées</p><ul class="sc-list" id="scColList">${cols.map((c,i)=>`<li><input type="checkbox" id="col${i}" ${i<mvp?'checked':''}><label for="col${i}" style="flex:1;cursor:pointer;font-size:.75rem;margin-left:.4rem">${c.title||c.path.split('/').pop().replace(/-/g,' ')}</label>${c.products!=null?`<span style="font-size:.63rem;color:var(--green);font-weight:600;white-space:nowrap">${c.products} prod.</span>`:''}<span class="sc-path">${c.path}</span></li>`).join('')}</ul><div class="sc-actions"><div style="display:flex;align-items:center;gap:.6rem;flex:1;flex-wrap:wrap"><label style="font-size:.78rem;color:var(--muted)">Collections à cloner :</label><input type="number" id="scCloneN" value="${mvp}" min="1" max="${total}" style="width:58px;background:#0d0d0d;border:1px solid var(--border);color:var(--text);padding:.3rem .5rem;border-radius:6px;font-size:.82rem" onchange="updateChecks(this.value,${total})"><span style="font-size:.72rem;color:var(--muted)">Recommandé : <strong style="color:var(--green)">${mvp}</strong></span></div><button class="btn-deploy" onclick="launchExtraction()">🚀 Lancer l'extraction</button><button class="btn-dl" onclick="dlBP()">⬇ blueprint.json</button><button class="btn-deploy" style="background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.5);color:#a855f7" onclick="openDeployModal()">⚡ Déployer le site</button></div>`;
 }
 function closeSc(){document.getElementById('scModal').classList.remove('open');}
+function openDeployModal(){
+  if(!_bp)return;
+  const niches=JSON.parse(localStorage.getItem('nc_'+_bp.source)||'null')||detectNiches(_bp.source)||[];
+  const niche=niches[0]||'Mode Femme';
+  document.getElementById('scBody').innerHTML=`
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1.2rem">Déployer un site statique SEO depuis le blueprint de <strong style="color:var(--blue)">${_bp.source}</strong></p>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:.4rem">Domaine cible (ton domaine acquis)</label>
+      <input id="deployDomain" type="text" placeholder="ex: ma-boutique-lingerie.fr" value="${_bp.source}" style="width:100%;background:#0d0d0d;border:1px solid var(--border);color:var(--text);padding:.6rem .9rem;border-radius:8px;font-size:.88rem">
+    </div>
+    <div style="margin-bottom:1.2rem">
+      <label style="font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:.4rem">Niche détectée</label>
+      <input id="deployNiche" type="text" value="${niche}" style="width:100%;background:#0d0d0d;border:1px solid var(--border);color:var(--text);padding:.6rem .9rem;border-radius:8px;font-size:.88rem">
+    </div>
+    <div style="background:#0a0d14;border-radius:8px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.75rem;color:var(--muted)">
+      <strong style="color:var(--text)">Pages générées :</strong> Accueil · Collections · ${_bp.mvpCollections} pages collection · Mentions légales · CGV · Confidentialité · sitemap.xml · robots.txt
+    </div>
+    <div class="sc-actions">
+      <button class="btn-deploy" style="background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.6);color:#a855f7;flex:1" onclick="runDeploy()">⚡ Générer & Déployer</button>
+      <button class="btn-dl" onclick="closeSc()">Annuler</button>
+    </div>
+    <div id="deployStatus" style="margin-top:1rem;font-size:.78rem;color:var(--muted)"></div>`;
+}
+async function runDeploy(){
+  const domain=document.getElementById('deployDomain').value.trim();
+  const niche=document.getElementById('deployNiche').value.trim();
+  if(!domain||!_bp)return;
+  const st=document.getElementById('deployStatus');
+  st.innerHTML='<span class="spinner" style="display:inline-block"></span> Génération en cours…';
+  try{
+    const r=await fetch(API_FACTORY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({blueprint:_bp,niche,domain}),signal:AbortSignal.timeout(30000)});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    st.innerHTML=`<div style="padding:.8rem 1rem;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:8px">
+      ✅ <strong style="color:var(--green)">${d.pages} pages déployées</strong><br>
+      <span style="color:var(--muted)">Slug : ${d.slug}</span><br>
+      <a href="${d.serverUrl}" target="_blank" style="color:var(--blue);font-weight:600">${d.serverUrl}</a>
+    </div>`;
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;}
+}
 function updateChecks(n,total){const v=Math.max(1,Math.min(+n||1,total));document.getElementById('scCloneN').value=v;document.querySelectorAll('#scColList input[type=checkbox]').forEach((cb,i)=>cb.checked=i<v);}
 function launchExtraction(){if(!_bp)return;const sel=[];document.querySelectorAll('#scColList input[type=checkbox]:checked').forEach(cb=>{const i=+cb.id.replace('col','');if(_bp.allCollections[i])sel.push(_bp.allCollections[i]);});_bp.mvpSelection=sel;_bp.mvpCollections=sel.length;dlBP();showToast(`${sel.length} collection${sel.length>1?'s':''} extraite${sel.length>1?'s':''}`);}
 function dlBP(){if(!_bp)return;const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(_bp,null,2)],{type:'application/json'})),download:`blueprint-${_bp.source}.json`});a.click();URL.revokeObjectURL(a.href);}
