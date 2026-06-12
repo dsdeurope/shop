@@ -130,7 +130,6 @@
     <tbody id="tbodyAcq"><tr><td colspan="7" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
   </table></div>
 </div>
-
 <div id="scModal" class="sc-overlay" onclick="closeSc()">
   <div class="sc-box" onclick="event.stopPropagation()">
     <div class="sc-head">
@@ -143,6 +142,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+if(sessionStorage.getItem('v35_auth')!=='c0e1ef644e74252419e56e7818885cbeaf7bd35bec04b0dfda954678e4f16354')location.replace('/login.html?r='+encodeURIComponent(location.pathname));
 const API_HUNTER='https://v35-domain-hunter.ernestpedanou.workers.dev';
 const API_SEQ='https://v35-sequenceur.ernestpedanou.workers.dev';
 const REGISTRAR='https://www.ovh.com/fr/domaines/?domain=';
