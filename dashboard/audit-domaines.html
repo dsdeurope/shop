@@ -101,6 +101,16 @@
   <div class="card" style="border-color:rgba(0,255,136,.2)"><div class="card-icon">📈</div><div class="card-n" id="cntCA" style="color:var(--green);font-size:1.2rem">—</div><div class="card-l">CA Estimé / mois *</div></div>
 </div>
 <div id="nfBar" style="padding:.5rem 2rem;display:flex;gap:.4rem;flex-wrap:wrap;border-bottom:1px solid var(--border)"></div>
+<div style="border-bottom:1px solid var(--border);">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem 2rem .3rem;">
+    <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">📅 Calendrier Backlinks</span>
+    <a href="/calendrier.html" style="font-size:.72rem;color:var(--green);text-decoration:none;font-weight:600;">Voir tout →</a>
+  </div>
+  <div style="display:flex;gap:1rem;padding:.3rem 2rem .7rem;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="auditCalCards"></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:6px;overflow:hidden;min-width:260px;margin-left:auto" id="auditCalWeek"></div>
+  </div>
+</div>
 <div class="section t-prosp">
   <div class="section-header">
     <span class="section-title">Sites Leaders (Prospection)</span>
@@ -475,7 +485,32 @@ async function openAlts(domain){
 }
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
-load();setInterval(load,90000);
+function renderAuditCal(){
+  const sc=JSON.parse(localStorage.getItem('bl_schedule')||'null')?.spots;
+  if(!sc){document.getElementById('auditCalCards').innerHTML='<span style="font-size:.75rem;color:var(--muted)">Aucun calendrier — <a href="/calendrier.html" style="color:var(--green)">générer →</a></span>';return;}
+  const todayStr=new Date().toISOString().slice(0,10);
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay(),mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+  const wStrs=days.map(d=>d.toISOString().slice(0,10));
+  const ok=sc.filter(s=>s.status==='OK').length,wait=sc.filter(s=>s.status==='EN ATTENTE').length;
+  const wkT=sc.filter(s=>wStrs.includes(s.date)).length,wkD=sc.filter(s=>wStrs.includes(s.date)&&s.status==='OK').length;
+  const todN=sc.filter(s=>s.date===todayStr).length;
+  document.getElementById('auditCalCards').innerHTML=[
+    [todN+' auj.','#ffd700'],[wkD+'/'+wkT+' sem.','#ff8c00'],[ok+' OK','#00ff88'],[wait+' en att.','#64748b'],
+  ].map(([v,c])=>`<span style="padding:3px 10px;border-radius:8px;font-size:.72rem;font-weight:700;color:${c};background:${c}18;border:1px solid ${c}44">${v}</span>`).join('');
+  const DNAME=['L','M','M','J','V','S','D'];
+  document.getElementById('auditCalWeek').innerHTML=days.map((d,i)=>{
+    const ds=d.toISOString().slice(0,10),isToday=ds===todayStr,isWE=i>=5;
+    const sp=sc.filter(s=>s.date===ds),done=sp.filter(s=>s.status==='OK').length;
+    return`<div style="background:${isToday?'#111a2a':'var(--surface)'};padding:.4rem .3rem;text-align:center;${isWE?'opacity:.4':''}">
+      <div style="font-size:.58rem;color:${isToday?'var(--orange)':'var(--muted)'};text-transform:uppercase">${DNAME[i]}</div>
+      <div style="font-size:.72rem;font-weight:700;color:${isToday?'var(--orange)':'var(--text)'}">${d.getDate()}</div>
+      ${sp.length?`<div style="font-size:.6rem;color:${done===sp.length?'var(--green)':'var(--yellow)'};margin-top:1px">${done}/${sp.length}</div>`:'<div style="font-size:.6rem;color:#1e2535">·</div>'}
+    </div>`;
+  }).join('');
+}
+load();renderAuditCal();setInterval(load,90000);
 </script>
 </body>
 </html>
