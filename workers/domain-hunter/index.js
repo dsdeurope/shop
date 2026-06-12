@@ -293,9 +293,13 @@ async function assessDomain(domain, leaderFps, niche, env) {
     return null;
   }
 
+  const ACQUIRABLE = new Set(['disponible','parké','expiré','potentiellement_disponible','abandonné']);
+  const type = ACQUIRABLE.has(availability) ? 'ACQUISITION' : 'PROSPECTION';
+
   return {
     domain,
     niche,
+    type,
     availability,
     httpStatus,
     parked,

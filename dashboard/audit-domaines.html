@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V35 — Audit Domaines</title>
+  <style>
+    :root{
+      --bg:#0d0d0d;--surface:#111520;--border:#1e2535;
+      --green:#00ff88;--yellow:#ffd700;--orange:#ff8c00;
+      --red:#ff4444;--blue:#4488ff;--purple:#a855f7;--text:#e2e8f0;--muted:#64748b;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;}
+
+    header{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:1rem;
+      padding:.8rem 2rem;background:rgba(13,13,13,.92);backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--border);}
+    .logo{font-weight:700;font-size:1rem;color:var(--text);}
+    .logo span{color:var(--orange);}
+    nav a{color:var(--muted);text-decoration:none;font-size:.85rem;margin-left:1.5rem;transition:color .2s;}
+    nav a:hover,nav a.active{color:var(--text);}
+    .btn{padding:.4rem 1rem;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;transition:opacity .2s;}
+    .btn:hover{opacity:.85;}
+    .btn-refresh{background:var(--surface);border:1px solid var(--border);color:var(--text);margin-left:auto;}
+
+    /* Summary cards */
+    .cards{display:flex;gap:1rem;padding:1.5rem 2rem;flex-wrap:wrap;}
+    .card{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.5rem;}
+    .card-icon{font-size:1.4rem;margin-bottom:.4rem;}
+    .card-n{font-size:1.8rem;font-weight:700;}
+    .card-l{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:3px;}
+    .card.prospection{border-color:rgba(0,255,136,.2);}
+    .card.prospection .card-n{color:var(--green);}
+    .card.acquisition{border-color:rgba(255,140,0,.25);}
+    .card.acquisition .card-n{color:var(--orange);}
+
+    /* Section */
+    .section{margin:0 2rem 2rem;}
+    .section-header{display:flex;align-items:center;gap:.8rem;padding:.8rem 0;
+      border-bottom:2px solid var(--border);margin-bottom:0;}
+    .section-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+    .section-count{font-size:.75rem;background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:2px 10px;color:var(--muted);}
+    .section-search{margin-left:auto;background:var(--surface);border:1px solid var(--border);
+      color:var(--text);padding:.3rem .7rem;border-radius:6px;font-size:.8rem;width:200px;}
+    .t-prosp .section-title{color:var(--green);}
+    .t-prosp .section-title::before{content:'📊 ';}
+    .t-acq .section-title{color:var(--orange);}
+    .t-acq .section-title::before{content:'🏷️ ';}
+
+    /* Table */
+    .table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:2rem;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:.6rem 1rem;text-align:left;font-size:.68rem;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);background:rgba(30,37,53,.5);
+      border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+    thead th:hover{color:var(--text);}
+    tbody td{padding:.65rem 1rem;border-bottom:1px solid #0f131a;vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover td{background:#0a0d14;}
+
+    /* Diode */
+    .diode{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;
+      border-radius:20px;font-size:.68rem;font-weight:700;white-space:nowrap;}
+    .diode::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+    .d-orange{background:rgba(255,140,0,.12);color:var(--orange);border:1px solid rgba(255,140,0,.4);}
+    .d-orange::before{background:var(--orange);animation:blink 1s infinite;}
+    .d-yellow{background:rgba(255,215,0,.1);color:var(--yellow);border:1px solid rgba(255,215,0,.3);}
+    .d-yellow::before{background:var(--yellow);}
+    .d-green{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.25);}
+    .d-green::before{background:var(--green);}
+    .d-grey{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2);}
+    .d-grey::before{background:var(--muted);}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+    /* Availability badge */
+    .avail-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.68rem;font-weight:600;}
+    .av-actif{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+    .av-disponible{background:rgba(255,140,0,.1);color:var(--orange);border:1px solid rgba(255,140,0,.3);}
+    .av-parke{background:rgba(255,215,0,.1);color:var(--yellow);border:1px solid rgba(255,215,0,.25);}
+    .av-expire{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25);}
+    .av-other{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2);}
+
+    /* Action buttons */
+    .btn-seq{padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;
+      border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.1);color:#a855f7;transition:all .2s;}
+    .btn-seq:hover{background:rgba(168,85,247,.25);}
+    .btn-seq.running{opacity:.6;cursor:not-allowed;}
+    .btn-price{padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;
+      border:1px solid rgba(255,140,0,.4);background:rgba(255,140,0,.1);color:var(--orange);transition:all .2s;}
+    .btn-price:hover{background:rgba(255,140,0,.2);}
+    .btn-price-done{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08);color:var(--green);}
+
+    .domain-link{color:var(--text);text-decoration:none;font-weight:600;font-size:.83rem;}
+    .domain-link:hover{color:var(--blue);}
+    .fp-score{font-size:.8rem;}
+    .fp-hi{color:var(--orange);}
+    .fp-med{color:var(--yellow);}
+    .fp-lo{color:var(--muted);}
+    .wb{font-size:.75rem;color:var(--muted);}
+    .wb.ok{color:var(--green);}
+
+    .empty,.loading{text-align:center;padding:3rem 2rem;color:var(--muted);font-size:.85rem;}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);
+      border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:.4rem;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e2535;border:1px solid var(--border);
+      border-radius:8px;padding:.7rem 1.2rem;font-size:.82rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;}
+    .toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">Zenith<span>lab</span></a>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/domaines.html">Domaines</a>
+    <a href="/audit-domaines.html" class="active">Audit</a>
+    <a href="/spots.html">Spots</a>
+  </nav>
+  <button class="btn btn-refresh" onclick="load()">↻ Actualiser</button>
+</header>
+
+<div class="cards">
+  <div class="card prospection">
+    <div class="card-icon">📊</div>
+    <div class="card-n" id="cntProsp">—</div>
+    <div class="card-l">Sites leaders — Prospection</div>
+  </div>
+  <div class="card acquisition">
+    <div class="card-icon">🏷️</div>
+    <div class="card-n" id="cntAcq">—</div>
+    <div class="card-l">Domaines à acquérir</div>
+  </div>
+  <div class="card" style="border-color:rgba(255,68,68,.2);">
+    <div class="card-icon">🟠</div>
+    <div class="card-n" id="cntAlert" style="color:var(--orange)">—</div>
+    <div class="card-l">Alertes achat</div>
+  </div>
+  <div class="card" style="border-color:rgba(68,136,255,.2);">
+    <div class="card-icon">📅</div>
+    <div class="card-n" id="cntWb" style="color:var(--blue)">—</div>
+    <div class="card-l">Avec historique Wayback</div>
+  </div>
+</div>
+
+<!-- SECTION PROSPECTION -->
+<div class="section t-prosp">
+  <div class="section-header">
+    <span class="section-title">Sites Leaders (Prospection)</span>
+    <span class="section-count" id="countProsp">0</span>
+    <input class="section-search" type="text" placeholder="Filtrer…" oninput="filterTable('prosp',this.value)">
+  </div>
+  <div class="table-wrap">
+    <table id="tProsp">
+      <thead>
+        <tr>
+          <th>Domaine</th>
+          <th>Niche</th>
+          <th>Diode</th>
+          <th>Footprint</th>
+          <th>Score</th>
+          <th>Wayback</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyProsp">
+        <tr><td colspan="7" class="loading"><span class="spinner"></span>Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SECTION ACQUISITION -->
+<div class="section t-acq">
+  <div class="section-header">
+    <span class="section-title">Domaines à Acquérir (Disponibles)</span>
+    <span class="section-count" id="countAcq">0</span>
+    <input class="section-search" type="text" placeholder="Filtrer…" oninput="filterTable('acq',this.value)">
+  </div>
+  <div class="table-wrap">
+    <table id="tAcq">
+      <thead>
+        <tr>
+          <th>Domaine</th>
+          <th>Niche</th>
+          <th>Disponibilité</th>
+          <th>Diode</th>
+          <th>Score</th>
+          <th>Wayback</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyAcq">
+        <tr><td colspan="7" class="loading"><span class="spinner"></span>Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_HUNTER  = 'https://v35-domain-hunter.ernestpedanou.workers.dev';
+const API_SEQ     = 'https://v35-sequenceur.ernestpedanou.workers.dev';
+const REGISTRAR   = 'https://www.ovh.com/fr/domaines/?domain=';
+
+let allProsp = [], allAcq = [];
+
+function getType(d) {
+  const ACQUIRABLE = ['disponible','parké','expiré','potentiellement_disponible','abandonné'];
+  if (d.type) return d.type;
+  return ACQUIRABLE.includes(d.availability) ? 'ACQUISITION' : 'PROSPECTION';
+}
+
+async function load() {
+  try {
+    const r = await fetch(`${API_HUNTER}?action=report`);
+    const data = await r.json();
+    const all = data.opportunities || [];
+    allProsp = all.filter(d => getType(d) === 'PROSPECTION');
+    allAcq   = all.filter(d => getType(d) === 'ACQUISITION');
+    renderCards(all);
+    renderProsp(allProsp);
+    renderAcq(allAcq);
+  } catch(e) {
+    ['tbodyProsp','tbodyAcq'].forEach(id => {
+      document.getElementById(id).innerHTML = `<tr><td colspan="7" class="empty">Impossible de joindre l'API.</td></tr>`;
+    });
+  }
+}
+
+function renderCards(all) {
+  document.getElementById('cntProsp').textContent  = all.filter(d => getType(d) === 'PROSPECTION').length;
+  document.getElementById('cntAcq').textContent    = all.filter(d => getType(d) === 'ACQUISITION').length;
+  document.getElementById('cntAlert').textContent  = all.filter(d => d.diode?.color === 'orange').length;
+  document.getElementById('cntWb').textContent     = all.filter(d => d.wayback?.snapshots > 0).length;
+}
+
+function filterTable(type, val) {
+  const src = type === 'prosp' ? allProsp : allAcq;
+  const f = val.toLowerCase();
+  const filtered = f ? src.filter(d => d.domain.toLowerCase().includes(f)) : src;
+  if (type === 'prosp') renderProsp(filtered);
+  else renderAcq(filtered);
+}
+
+function availClass(a) {
+  if (a === 'actif') return 'av-actif';
+  if (a === 'disponible') return 'av-disponible';
+  if (a === 'parké') return 'av-parke';
+  if (a === 'expiré') return 'av-expire';
+  return 'av-other';
+}
+
+function fpClass(s) {
+  if (s >= 50) return 'fp-hi';
+  if (s >= 30) return 'fp-med';
+  return 'fp-lo';
+}
+
+function nicheLabel(n) {
+  return {seo_blog:'SEO Blog',ecommerce:'E-commerce',local_seo:'Local SEO',marketing_agency:'Marketing'}[n] || n || '—';
+}
+
+function renderProsp(list) {
+  document.getElementById('countProsp').textContent = list.length;
+  const sorted = [...list].sort((a, b) => (b.fpScore||0) - (a.fpScore||0));
+  if (!sorted.length) {
+    document.getElementById('tbodyProsp').innerHTML = '<tr><td colspan="7" class="empty">Aucun site leader trouvé.</td></tr>';
+    return;
+  }
+  document.getElementById('tbodyProsp').innerHTML = sorted.map(d => {
+    const dc = d.diode?.color || 'grey';
+    const wb = d.wayback || {};
+    return `<tr>
+      <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
+      <td style="font-size:.75rem;color:var(--muted)">${nicheLabel(d.niche)}</td>
+      <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
+      <td><span class="fp-score ${fpClass(d.fpScore||0)}">${d.fpScore||0}%</span></td>
+      <td style="font-size:.78rem">${d.totalScore||0}/100</td>
+      <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots ? `✓ ${wb.snapshots}` : '—'}</td>
+      <td><button class="btn-seq" id="seq-${d.domain}" onclick="triggerSequenceur('${d.domain}',this)">📊 Analyser maillage</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAcq(list) {
+  document.getElementById('countAcq').textContent = list.length;
+  const sorted = [...list].sort((a, b) => {
+    const pa = a.diode?.priority||9, pb = b.diode?.priority||9;
+    if (pa !== pb) return pa - pb;
+    return (b.wayback?.snapshots||0) - (a.wayback?.snapshots||0);
+  });
+  if (!sorted.length) {
+    document.getElementById('tbodyAcq').innerHTML = '<tr><td colspan="7" class="empty">Aucun domaine à acquérir détecté.</td></tr>';
+    return;
+  }
+  document.getElementById('tbodyAcq').innerHTML = sorted.map(d => {
+    const dc = d.diode?.color || 'grey';
+    const wb = d.wayback || {};
+    return `<tr>
+      <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
+      <td style="font-size:.75rem;color:var(--muted)">${nicheLabel(d.niche)}</td>
+      <td><span class="avail-badge ${availClass(d.availability)}">${d.availability||'inconnu'}</span></td>
+      <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
+      <td style="font-size:.78rem">${d.totalScore||0}/100</td>
+      <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots ? `✓ ${wb.snapshots}` : '—'}</td>
+      <td><button class="btn-price" onclick="checkPrice('${d.domain}',this)">💰 Vérifier prix</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function triggerSequenceur(domain, btn) {
+  btn.classList.add('running');
+  btn.textContent = '⏳ En cours…';
+  try {
+    const r = await fetch(API_SEQ, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ domain, action: 'analyze-mesh' }),
+    });
+    const d = await r.json().catch(() => ({}));
+    btn.textContent = '✓ Lancé';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'rgba(0,255,136,.4)';
+    showToast(`Séquenceur lancé sur ${domain}`);
+  } catch {
+    btn.textContent = '✗ Erreur';
+    btn.style.color = 'var(--red)';
+    btn.classList.remove('running');
+  }
+}
+
+function checkPrice(domain, btn) {
+  window.open(REGISTRAR + encodeURIComponent(domain), '_blank');
+  btn.classList.add('btn-price-done');
+  btn.textContent = '✓ OVH ouvert';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+load();
+setInterval(load, 90000);
+</script>
+</body>
+</html>
