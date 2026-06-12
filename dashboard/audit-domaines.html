@@ -170,6 +170,8 @@ const NC={'Lingerie':'#f472b6','Mode Femme':'#c084fc','Mode Homme':'#818cf8','Lu
   'Bijoux':'#a78bfa','Bagagerie':'#60a5fa','Maroquinerie':'#a16207','Accessoires':'#e879f9',
   'High-Tech':'#38bdf8','Enfants':'#4ade80','Alimentaire':'#84cc16','Animaux':'#f97316',
   'Voyage':'#06b6d4','Auto':'#94a3b8'};
+const GROUPS={Fashion:['Lingerie','Mode Femme','Mode Homme','Accessoires','Bijoux','Bagagerie','Maroquinerie'],Home:['Décoration','Luminaires'],Health:['Beauté','Bien-être','Sport','Thermique'],Family:['Enfants'],Nature:['Alimentaire','Animaux','Voyage'],Tech:['High-Tech','Auto']};
+function groupOf(n){for(const[g,ns]of Object.entries(GROUPS))if(ns.includes(n))return g;return null;}
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,' ');}
 function detectNiches(domain){
   const parts=norm(domain.replace(/\.(fr|com|net|org|eu|io)$/,'')).split(/[-_. ]+/);
@@ -179,7 +181,10 @@ function detectNiches(domain){
     if(p===w)sc[n]=(sc[n]||0)+3;
     else if(p.length>=3&&(p.includes(w)||w.includes(p)&&w.length>=4))sc[n]=(sc[n]||0)+1;
   }
-  const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).filter(([,s])=>s>=1).map(([n])=>n).slice(0,3);
+  const sorted=Object.entries(sc).sort((a,b)=>b[1]-a[1]).filter(([,s])=>s>=1).map(([n])=>n);
+  if(!sorted.length)return null;
+  const g=groupOf(sorted[0]);
+  const r=sorted.filter(n=>!g||groupOf(n)===g).slice(0,2);
   return r.length?r:null;
 }
 function nichesHTML(niches){

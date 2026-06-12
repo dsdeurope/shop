@@ -31,14 +31,39 @@ const NK = {
   'Thermique':['polaire','thermique','doudoune','parka','manteau','ski','hiver','chaud'],
 };
 
+// Compatibility groups — niches across groups are mutually exclusive
+const GROUPS = {
+  Fashion: ['Lingerie','Mode Femme','Mode Homme','Accessoires','Bijoux','Bagagerie','Maroquinerie'],
+  Home:    ['Décoration','Luminaires'],
+  Health:  ['Beauté','Bien-être','Sport','Thermique'],
+  Family:  ['Enfants'],
+  Nature:  ['Alimentaire','Animaux','Voyage'],
+  Tech:    ['High-Tech','Auto'],
+};
+function groupOf(n){for(const[g,ns]of Object.entries(GROUPS))if(ns.includes(n))return g;return null;}
+
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,' ');}
 
-function detectNichesFromText(text) {
-  const tn = norm(text);
-  const sc = {};
-  for (const [n, ws] of Object.entries(NK))
-    for (const w of ws) { const c = (tn.match(new RegExp('\\b'+w+'\\b', 'g')) || []).length; if (c) sc[n] = (sc[n]||0)+c; }
-  return Object.entries(sc).sort((a,b) => b[1]-a[1]).slice(0,3).map(([n]) => n);
+function scoreText(text){
+  const tn=norm(text),sc={};
+  for(const[n,ws]of Object.entries(NK))for(const w of ws){const c=(tn.match(new RegExp('\\b'+w+'\\b','g'))||[]).length;if(c)sc[n]=(sc[n]||0)+c;}
+  return sc;
+}
+
+function detectNichesScoped(titleH1, fullText) {
+  const scPrimary = scoreText(titleH1);
+  const scFull    = scoreText(fullText);
+  // Primary niche = strongest signal from title+H1 (most authoritative)
+  const primary = Object.entries(scPrimary).sort((a,b)=>b[1]-a[1])[0]?.[0]
+               || Object.entries(scFull).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  if (!primary) return [];
+  const g = groupOf(primary);
+  // Keep only niches from the same compatibility group, max 2
+  return Object.entries(scFull)
+    .sort((a,b)=>b[1]-a[1])
+    .filter(([n])=>!g||groupOf(n)===g)
+    .slice(0,2)
+    .map(([n])=>n);
 }
 
 function extractMeta(html) {
@@ -54,9 +79,9 @@ function extractMeta(html) {
   };
 }
 
-function extractMenuFooter(html) {
-  const blocks = (html.match(/<(?:nav|footer|header)[^>]*>[\s\S]{0,8000}<\/(?:nav|footer|header)>/gi) || []).join(' ');
-  return [...blocks.matchAll(/<a[^>]*>([^<]{2,40})<\/a>/gi)].map(m => m[1].trim()).slice(0, 30).join(' ');
+function extractNavOnly(html) {
+  const navs = (html.match(/<nav[^>]*>[\s\S]{0,3000}<\/nav>/gi) || []).slice(0,2).join(' ');
+  return [...navs.matchAll(/<a[^>]*>([^<]{2,40})<\/a>/gi)].map(m=>m[1].trim()).slice(0,15).join(' ');
 }
 
 async function analyzeMesh(domain, env) {
@@ -64,7 +89,11 @@ async function analyzeMesh(domain, env) {
   const cached = await env.KV.get(cacheKey);
   if (cached) {
     const c = JSON.parse(cached);
-    if (Date.now() - new Date(c.ts).getTime() < 3600000) return c;
+    if (Date.now() - new Date(c.ts).getTime() < 3600000) {
+      const ns = c.niches || [];
+      const valid = ns.length <= 1 || ns.slice(1).every(n => groupOf(n) === groupOf(ns[0]));
+      if (valid) return c;
+    }
   }
 
   // Retry guard: after 3 failures → manual review
@@ -116,12 +145,12 @@ async function analyzeMesh(domain, env) {
     }
   }
 
-  // Domain name as last-resort semantic input
   const domainWords = domain.replace(/\.(fr|com|net|org|eu|io)$/, '').replace(/[-_]/g, ' ');
   const meta = extractMeta(html);
-  const navFooter = extractMenuFooter(html);
-  const text = [meta.title, meta.desc, meta.ogTitle, meta.ogDesc, meta.h1, meta.kw, navFooter, domainWords, domainWords, domainWords].join(' ');
-  const niches = detectNichesFromText(text);
+  const navText = extractNavOnly(html);
+  const titleH1 = [meta.title, meta.ogTitle, meta.h1, domainWords].join(' ');
+  const fullText = [titleH1, meta.desc, meta.ogDesc, meta.kw, navText].join(' ');
+  const niches = detectNichesScoped(titleH1, fullText);
 
   const result = { domain, niches: niches.length ? niches : ['Non-classé'], meta: { title: meta.title, desc: meta.desc.slice(0, 120) }, cfProtected, httpCode, ts: new Date().toISOString(), action: 'analyze-mesh' };
   try { await env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 3600 }); } catch {}
