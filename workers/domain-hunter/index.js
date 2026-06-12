@@ -83,9 +83,9 @@ async function huntDomains(niche, env) {
   const opportunities = [];
   for (const candidate of candidates) {
     // Dédup léger 24h (sans écriture automatique comme isDuplicate)
-    const seenKey = `hseen2:${candidate}`;
+    const seenKey = `hseen3:${candidate}`;
     if (await env.KV.get(seenKey)) continue;
-    await env.KV.put(seenKey, '1', { expirationTtl: 3600 });
+    await env.KV.put(seenKey, '1', { expirationTtl: 300 });
 
     if (isPolluted(`https://${candidate}`)) continue;
 
@@ -118,13 +118,16 @@ async function huntDomains(niche, env) {
 // ─── Candidats — stratégie hybride (CC domain-level + Wayback outlinks + seeds) ─
 async function findCandidatesFromCrawl(niche, env) {
   const candidates = new Set();
-  const SKIP = new Set([
+  const SKIP_ROOTS = new Set([
     'github.com','google.com','youtube.com','facebook.com','twitter.com','x.com',
     'linkedin.com','amazon.com','wikipedia.org','shopify.com','woocommerce.com',
     'wordpress.com','wordpress.org','ahrefs.com','semrush.com','moz.com',
     'brightlocal.com','agencyspotter.com','wordcount.com','aliexpress.com',
     'amazon.fr','cdiscount.com','leboncoin.fr','ebay.fr',
+    'cloudflare.com','backlinko.com','wikimonde.com','searchengineland.com',
+    'neilpatel.com','hubspot.com','stripe.com','paypal.com','klarna.com',
   ]);
+  const SKIP = { has: h => SKIP_ROOTS.has(h) || [...SKIP_ROOTS].some(r => h.endsWith('.'+r)) };
 
   const { headers } = buildFetchOptions(env.PROXY_LIST);
 
@@ -381,8 +384,12 @@ function generateDorks(fp, niche, leaderUrl) {
 async function mergeGlobalReport(env, niche, opportunities) {
   const key = 'domains:report';
   const existing = JSON.parse(await env.KV.get(key) || '{"opportunities":[]}');
+  // Merge within niche (keep best, deduplicate by domain)
+  const newByDomain = Object.fromEntries(opportunities.map(o => [o.domain, o]));
+  const existingNiche = existing.opportunities.filter(o => o.niche === niche && !newByDomain[o.domain]);
   const merged = [
     ...existing.opportunities.filter(o => o.niche !== niche),
+    ...existingNiche,
     ...opportunities,
   ].sort((a, b) => (a.diode?.priority || 9) - (b.diode?.priority || 9));
 
