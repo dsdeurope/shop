@@ -122,6 +122,7 @@
   </div>
 
   <script>
+    if(sessionStorage.getItem('v35_auth')!=='c0e1ef644e74252419e56e7818885cbeaf7bd35bec04b0dfda954678e4f16354')location.replace('/login.html?r='+encodeURIComponent(location.pathname));
     const AGENTS = [
       { id: 'radar', name: 'Worker: Radar', type: 'worker' },
       { id: 'backlink-hunter', name: 'Worker: BacklinkHunter', type: 'worker' },

@@ -156,6 +156,7 @@
 </div>
 
 <script>
+if(sessionStorage.getItem('v35_auth')!=='c0e1ef644e74252419e56e7818885cbeaf7bd35bec04b0dfda954678e4f16354')location.replace('/login.html?r='+encodeURIComponent(location.pathname));
 const API = 'https://v35-domain-hunter.ernestpedanou.workers.dev';
 let all = [], filtered = [], sortKey = 'diode.priority', sortAsc = true;
 
