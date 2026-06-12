@@ -14,27 +14,54 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-const PALETTE_WORKER = 'https://v35-color-palette.ernestpedanou.workers.dev';
+const NICHES = {
+  lingerie:     { h: 330, s: 60 }, luminaires: { h:  45, s: 70 },
+  sport:        { h: 130, s: 65 }, bijoux:     { h:  42, s: 80 },
+  deco:         { h: 200, s: 45 }, mode:       { h: 270, s: 50 },
+  enfants:      { h: 190, s: 70 }, jardin:     { h: 100, s: 60 },
+  cuisine:      { h:  20, s: 75 }, beaute:     { h: 340, s: 55 },
+  electronique: { h: 210, s: 65 }, livres:     { h:  35, s: 50 },
+  animaux:      { h:  80, s: 55 }, sante:      { h: 160, s: 55 },
+  auto:         { h: 215, s: 60 }, maison:     { h: 195, s: 40 },
+  voyage:       { h: 230, s: 65 }, gastronomie:{ h:  15, s: 80 },
+};
+
+function hsl2hex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function buildPalette(niche) {
+  const n = NICHES[niche.toLowerCase().trim()] || { h: 220, s: 55 };
+  const { h, s } = n;
+  const ha = (h + 140) % 360;
+  return {
+    primary:       hsl2hex(h,  s,     42),
+    primary_dark:  hsl2hex(h,  s,     28),
+    primary_light: hsl2hex(h,  s - 10, 90),
+    secondary:     hsl2hex(h,  s - 15, 55),
+    accent:        hsl2hex(ha, 70,    50),
+    surface:       hsl2hex(h,  15,    97),
+    bg:            hsl2hex(h,  8,     99),
+    text:          hsl2hex(h,  10,    12),
+    text_muted:    hsl2hex(h,  8,     50),
+    border:        hsl2hex(h,  15,    88),
+    gradient_from: hsl2hex(h,  s,     38),
+    gradient_to:   hsl2hex(h,  s - 5, 22),
+    hero_text:     '#ffffff',
+  };
+}
 
 function brand(domain) {
   return domain.replace(/^www\./, '').split('.')[0]
     .replace(/-/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-async function fetchPalette(niche, env) {
-  // Try color-palette worker, fallback to generic
-  try {
-    const r = await fetch(`${PALETTE_WORKER}/?niche=${encodeURIComponent(niche)}`);
-    if (r.ok) return await r.json();
-  } catch {}
-  // Neutral fallback
-  return {
-    primary: '#4f46e5', primary_dark: '#3730a3', primary_light: '#ede9fe',
-    secondary: '#7c3aed', accent: '#f59e0b', surface: '#f8fafc', bg: '#ffffff',
-    text: '#1e1b4b', text_muted: '#6b7280', border: '#e2e8f0',
-    gradient_from: '#4f46e5', gradient_to: '#312e81', hero_text: '#ffffff',
-  };
 }
 
 function buildFiles(bp, domain, brandName, niche, p) {
@@ -109,7 +136,7 @@ export default {
     if (!bp || !domain) return Response.json({ error: 'blueprint + domain required' }, { status: 400, headers: CORS });
 
     const brandName = brand(domain);
-    const palette = await fetchPalette(niche, env);
+    const palette = buildPalette(niche);
     const files = buildFiles(bp, domain, brandName, niche, palette);
 
     const summary = {
