@@ -85,7 +85,7 @@ async function huntDomains(niche, env) {
     // Dédup léger 24h (sans écriture automatique comme isDuplicate)
     const seenKey = `hseen3:${candidate}`;
     if (await env.KV.get(seenKey)) continue;
-    await env.KV.put(seenKey, '1', { expirationTtl: 86400 });
+    await env.KV.put(seenKey, '1', { expirationTtl: 3600 });
 
     if (isPolluted(`https://${candidate}`)) continue;
 
