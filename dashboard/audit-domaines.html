@@ -211,9 +211,10 @@ const REGISTRAR   = 'https://www.ovh.com/fr/domaines/?domain=';
 let allProsp = [], allAcq = [];
 
 function getType(d) {
-  const ACQUIRABLE = ['disponible','parké','expiré','potentiellement_disponible','abandonné'];
+  // Priorité au champ type calculé par le worker (basé sur DNS)
   if (d.type) return d.type;
-  return ACQUIRABLE.includes(d.availability) ? 'ACQUISITION' : 'PROSPECTION';
+  // Fallback legacy: actif = PROSPECTION, tout le reste = ACQUISITION
+  return d.availability === 'actif' ? 'PROSPECTION' : 'ACQUISITION';
 }
 
 async function load() {
@@ -221,8 +222,10 @@ async function load() {
     const r = await fetch(`${API_HUNTER}?action=report`);
     const data = await r.json();
     const all = data.opportunities || [];
-    allProsp = all.filter(d => getType(d) === 'PROSPECTION');
-    allAcq   = all.filter(d => getType(d) === 'ACQUISITION');
+    // Exclure les entrées avec path dans le domaine (ex: ahrefs.com/blog)
+    const valid = all.filter(d => !d.domain.includes('/'));
+    allProsp = valid.filter(d => getType(d) === 'PROSPECTION');
+    allAcq   = valid.filter(d => getType(d) === 'ACQUISITION');
     renderCards(all);
     renderProsp(allProsp);
     renderAcq(allAcq);

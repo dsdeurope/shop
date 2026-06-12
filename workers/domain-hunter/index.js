@@ -197,7 +197,8 @@ async function findCandidatesFromCrawl(niche, env) {
     marketing_agency: [],
   };
   for (const seed of (NICHE_SEEDS[niche] || [])) {
-    if (!SKIP.has(seed)) candidates.add(seed);
+    const host = seed.split('/')[0]; // strip paths (ex: ahrefs.com/blog → ahrefs.com)
+    if (!SKIP.has(host)) candidates.add(host);
   }
 
   // Strategy 3 — Wayback outlinks depuis un leader (si peu de candidats)
@@ -293,8 +294,8 @@ async function assessDomain(domain, leaderFps, niche, env) {
     return null;
   }
 
-  const ACQUIRABLE = new Set(['disponible','parké','expiré','potentiellement_disponible','abandonné']);
-  const type = ACQUIRABLE.has(availability) ? 'ACQUISITION' : 'PROSPECTION';
+  // DNS resolves = site actif = PROSPECTION. Sinon = domaine libre/expiré = ACQUISITION
+  const type = dnsResult.resolves ? 'PROSPECTION' : 'ACQUISITION';
 
   return {
     domain,
@@ -423,7 +424,10 @@ const SKIP_ROOTS_MERGE = new Set([
   'cloudflare.com','backlinko.com','wikimonde.com','searchengineland.com',
   'neilpatel.com','hubspot.com','stripe.com','paypal.com','klarna.com',
 ]);
-const isPollutedDomain = h => SKIP_ROOTS_MERGE.has(h) || [...SKIP_ROOTS_MERGE].some(r => h.endsWith('.'+r));
+const isPollutedDomain = h => {
+  const root = h.split('/')[0]; // strip path (ex: ahrefs.com/blog → ahrefs.com)
+  return SKIP_ROOTS_MERGE.has(root) || SKIP_ROOTS_MERGE.has(h) || [...SKIP_ROOTS_MERGE].some(r => root.endsWith('.'+r));
+};
 
 async function mergeGlobalReport(env, niche, opportunities) {
   const key = 'domains:report';
