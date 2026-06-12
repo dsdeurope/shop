@@ -65,6 +65,22 @@
     @keyframes spin{to{transform:rotate(360deg);}}
     .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e2535;border:1px solid var(--border);border-radius:8px;padding:.7rem 1.2rem;font-size:.82rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;}
     .toast.show{opacity:1;}
+    .btn-scrape{border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.1);color:#fbbf24;}.btn-scrape:hover{background:rgba(251,191,36,.2);}
+    .sc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;display:none;align-items:center;justify-content:center;}
+    .sc-overlay.open{display:flex;}
+    .sc-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;}
+    .sc-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);font-size:.95rem;font-weight:700;}
+    .sc-body{padding:1.5rem;}
+    .sc-stat{display:flex;gap:1rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+    .sc-card{flex:1;min-width:130px;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;}
+    .sc-card-n{font-size:1.6rem;font-weight:700;}.sc-card-l{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+    .sc-list{list-style:none;display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;margin-bottom:.5rem;}
+    .sc-list li{padding:.4rem .7rem;background:#0d0d0d;border-radius:6px;font-size:.77rem;display:flex;align-items:center;gap:.6rem;}
+    .sc-idx{width:22px;font-size:.65rem;color:var(--muted);text-align:right;flex-shrink:0;}
+    .sc-path{margin-left:auto;font-size:.65rem;color:var(--muted);font-family:'Courier New',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .sc-actions{display:flex;gap:.8rem;margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);flex-wrap:wrap;}
+    .btn-dl{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:1px solid rgba(68,136,255,.5);background:rgba(68,136,255,.15);color:var(--blue);transition:opacity .2s;}.btn-dl:hover{opacity:.8;}
+    .btn-deploy{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:1px solid rgba(0,255,136,.5);background:rgba(0,255,136,.15);color:var(--green);transition:opacity .2s;}.btn-deploy:hover{opacity:.8;}
   </style>
 </head>
 <body>
@@ -121,6 +137,16 @@
       </tr></thead>
       <tbody id="tbodyAcq"><tr><td colspan="8" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
     </table>
+  </div>
+</div>
+
+<div id="scModal" class="sc-overlay" onclick="closeScModal()">
+  <div class="sc-box" onclick="event.stopPropagation()">
+    <div class="sc-head">
+      <span>🔬 Analyse de Clonage — <span id="scDomain" style="color:var(--blue)"></span></span>
+      <button onclick="closeScModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.5rem;line-height:1;padding:0">×</button>
+    </div>
+    <div id="scBody" class="sc-body"><div class="loading"><span class="spinner"></span>Scraping en cours…</div></div>
   </div>
 </div>
 
@@ -288,7 +314,7 @@ function renderProsp(list){
       <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots?`✓ ${wb.snapshots}`:'—'}</td>
       <td><span class="ca-val">${fmtCA(ca)} *</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="Modifier CR (${(cr*100).toFixed(1)}%) / AOV (${aov}€)">✎</button></td>
       <td>${competCell(cs)}</td>
-      <td><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">📊 Analyser</button></td>
+      <td><div style="display:flex;gap:4px"><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">📊 Analyser</button><button class="btn-sm btn-scrape" onclick="openScraper('${d.domain}')">🔬 Scraper</button></div></td>
     </tr>`;
   }).join('');
 }
@@ -354,6 +380,115 @@ function editCA(domain){
 function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── Scraper ──
+const PROXY  = u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+const PROXY2 = u => `https://corsproxy.io/?${encodeURIComponent(u)}`;
+
+async function proxyFetch(url) {
+  for (const mk of [PROXY, PROXY2]) {
+    try {
+      const r = await fetch(mk(url), {signal: AbortSignal.timeout(10000)});
+      if (r.ok) return r.text();
+    } catch {}
+  }
+  throw new Error('Proxies inaccessibles');
+}
+
+async function tryShopifyAPI(domain) {
+  try {
+    const r = await fetch(`https://${domain}/collections.json?limit=250`, {signal: AbortSignal.timeout(6000)});
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.collections?.map(c => ({title: c.title, path: `/collections/${c.handle}`, products: c.products_count})) || null;
+  } catch { return null; }
+}
+
+function extractFromHTML(html, domain) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const RX = /\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
+  const seen = new Set(), list = [];
+  doc.querySelectorAll('a[href]').forEach(a => {
+    let path;
+    try { path = new URL(a.getAttribute('href'), `https://${domain}`).pathname; } catch { return; }
+    if (!RX.test(path)) return;
+    const key = path.replace(/\/+$/,'');
+    if (seen.has(key) || key.split('/').length > 5) return;
+    seen.add(key);
+    const title = a.textContent.trim().replace(/\s+/g,' ');
+    if (title && title.length < 70) list.push({title, path, products: null});
+  });
+  return list;
+}
+
+function mvpCount(n) {
+  if (n <= 5) return n;
+  if (n <= 15) return Math.max(3, Math.ceil(n * .5));
+  if (n <= 40) return Math.max(5, Math.ceil(n * .3));
+  return Math.max(8, Math.min(15, Math.ceil(n * .2)));
+}
+
+let _bp = null;
+
+async function openScraper(domain) {
+  document.getElementById('scDomain').textContent = domain;
+  document.getElementById('scBody').innerHTML = '<div class="loading"><span class="spinner"></span>Scraping en cours…</div>';
+  document.getElementById('scModal').classList.add('open');
+
+  let collections;
+  try {
+    collections = await tryShopifyAPI(domain);
+    if (!collections) {
+      const html = await proxyFetch(`https://${domain}`);
+      collections = extractFromHTML(html, domain);
+    }
+  } catch(e) {
+    document.getElementById('scBody').innerHTML =
+      `<div class="empty">❌ Impossible de scraper ${domain}<br><small style="color:var(--muted)">${e.message}</small></div>`;
+    return;
+  }
+
+  const total = collections.length, mvp = mvpCount(total), top = collections.slice(0, mvp);
+  _bp = {source:domain, scrapedAt:new Date().toISOString(), totalCollections:total,
+    mvpCollections:mvp, mvpSelection:top, allCollections:collections,
+    shopify_hint:'Admin > Products > Collections', woocommerce_hint:'Products > Categories'};
+
+  const pct = total ? Math.round(mvp/total*100) : 0;
+  document.getElementById('scBody').innerHTML = `
+    <div class="sc-stat">
+      <div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Collections trouvées</div></div>
+      <div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">MVP recommandé</div></div>
+      <div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
+      Stratégie : lancer <strong style="color:var(--green)">${mvp} collections prioritaires</strong> sur ${total} pour valider le marché avant d'étendre.
+    </p>
+    <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Top ${mvp} collections à cloner</p>
+    <ul class="sc-list">
+      ${top.map((c,i)=>`<li><span class="sc-idx">#${i+1}</span><span>${c.title||c.path.split('/').pop().replace(/-/g,' ')}</span><span class="sc-path">${c.path}</span></li>`).join('')}
+    </ul>
+    <div class="sc-actions">
+      <button class="btn-dl" onclick="dlBlueprint()">⬇ Télécharger blueprint.json</button>
+      <button class="btn-deploy" onclick="deployAction('${domain}')">🚀 Lancer le déploiement sur domaine acquis</button>
+    </div>`;
+}
+
+function closeScModal() { document.getElementById('scModal').classList.remove('open'); }
+
+function dlBlueprint() {
+  if (!_bp) return;
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([JSON.stringify(_bp, null, 2)], {type:'application/json'})),
+    download: `blueprint-${_bp.source}.json`,
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function deployAction(srcDomain) {
+  const target = allAcq[0]?.domain;
+  showToast(target ? `Déploiement: ${srcDomain} → ${target}` : 'Aucun domaine acquisition — lancez une chasse');
+  if (target) window.open(REGISTRAR + encodeURIComponent(target), '_blank');
 }
 
 load();
