@@ -124,6 +124,18 @@
   <div class="stat"><div class="stat-n" id="sTotal" style="color:var(--text)">—</div><div class="stat-l">Total spots</div></div>
 </div>
 
+<!-- Calendrier Backlinks -->
+<div style="margin:1rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.2rem .4rem;">
+    <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">📅 Calendrier Backlinks</span>
+    <a href="/calendrier.html" style="font-size:.72rem;color:var(--green);text-decoration:none;font-weight:600;">Voir tout →</a>
+  </div>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:1rem;padding:.4rem 1.2rem .8rem;align-items:start">
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap" id="calCards"></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:6px;overflow:hidden;min-width:280px" id="calWeekSpots"></div>
+  </div>
+</div>
+
 <div class="table-wrap">
   <table>
     <thead>
@@ -227,7 +239,34 @@ function frictionLabel(f) {
   return {libre:'Libre',avec_compte:'Compte',email_contact:'Email'}[f] || f || '—';
 }
 
+function renderCalendar(){
+  const sc=JSON.parse(localStorage.getItem('bl_schedule')||'null')?.spots;
+  if(!sc){document.getElementById('calCards').innerHTML='<span style="font-size:.75rem;color:var(--muted)">Aucun calendrier — <a href="/calendrier.html" style="color:var(--green)">générer →</a></span>';return;}
+  const todayStr=new Date().toISOString().slice(0,10);
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay(),mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+  const wStrs=days.map(d=>d.toISOString().slice(0,10));
+  const ok=sc.filter(s=>s.status==='OK').length,wait=sc.filter(s=>s.status==='EN ATTENTE').length;
+  const wkT=sc.filter(s=>wStrs.includes(s.date)).length,wkD=sc.filter(s=>wStrs.includes(s.date)&&s.status==='OK').length;
+  const todN=sc.filter(s=>s.date===todayStr).length;
+  document.getElementById('calCards').innerHTML=[
+    [todN+' auj.','#ffd700'],[wkD+'/'+wkT+' sem.','#ff8c00'],[ok+' OK','#00ff88'],[wait+' en att.','#64748b'],
+  ].map(([v,c])=>`<span style="padding:3px 10px;border-radius:8px;font-size:.72rem;font-weight:700;color:${c};background:${c}18;border:1px solid ${c}44">${v}</span>`).join('');
+  const DNAME=['L','M','M','J','V','S','D'];
+  document.getElementById('calWeekSpots').innerHTML=days.map((d,i)=>{
+    const ds=d.toISOString().slice(0,10),isToday=ds===todayStr,isWE=i>=5;
+    const sp=sc.filter(s=>s.date===ds),done=sp.filter(s=>s.status==='OK').length;
+    return`<div style="background:${isToday?'#111a2a':'var(--surface)'};padding:.4rem .3rem;text-align:center;${isWE?'opacity:.4':''}">
+      <div style="font-size:.58rem;color:${isToday?'#ff8c00':'var(--muted)'};text-transform:uppercase">${DNAME[i]}</div>
+      <div style="font-size:.72rem;font-weight:700;color:${isToday?'#ff8c00':'var(--text)'}">${d.getDate()}</div>
+      ${sp.length?`<div style="font-size:.6rem;color:${done===sp.length?'#00ff88':'#ffd700'};margin-top:1px">${done}/${sp.length}</div>`:'<div style="font-size:.6rem;color:#1e2535">·</div>'}
+    </div>`;
+  }).join('');
+}
+
 load();
+renderCalendar();
 setInterval(load, 60000);
 </script>
 </body>
