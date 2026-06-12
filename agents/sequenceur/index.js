@@ -202,7 +202,17 @@ async function scrapeCollections(domain) {
   const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
   try {
     const r = await fetch(`https://${domain}/collections.json?limit=250`, { headers:{'User-Agent':UA}, signal:AbortSignal.timeout(8000) });
-    if (r.ok) { const j=await r.json(); if (j.collections?.length) return {domain,platform:'shopify',collections:j.collections.map(c=>({title:c.title,path:`/collections/${c.handle}`,products:c.products_count}))}; }
+    if (r.ok) {
+      const j=await r.json();
+      if (j.collections?.length) {
+        const cols=j.collections.slice(0,100);
+        const withCounts=await Promise.all(cols.map(async c=>{
+          try{const cr=await fetch(`https://${domain}/products/count.json?collection_id=${c.id}`,{headers:{'User-Agent':UA},signal:AbortSignal.timeout(5000)});const cj=await cr.json();return{title:c.title,path:`/collections/${c.handle}`,products:cj.count??null};}
+          catch{return{title:c.title,path:`/collections/${c.handle}`,products:null};}
+        }));
+        return {domain,platform:'shopify',collections:withCounts};
+      }
+    }
   } catch {}
   const RX=/\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
   try {
