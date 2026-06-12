@@ -207,7 +207,7 @@ async function scrapeCollections(domain) {
       if (j.collections?.length) {
         const cols=j.collections.slice(0,100);
         const withCounts=await Promise.all(cols.map(async c=>{
-          try{const cr=await fetch(`https://${domain}/products/count.json?collection_id=${c.id}`,{headers:{'User-Agent':UA},signal:AbortSignal.timeout(5000)});const cj=await cr.json();return{title:c.title,path:`/collections/${c.handle}`,products:cj.count??null};}
+          try{const cr=await fetch(`https://${domain}/collections/${c.handle}/products.json?limit=250&fields=id`,{headers:{'User-Agent':UA},signal:AbortSignal.timeout(6000)});const cj=await cr.json();return{title:c.title,path:`/collections/${c.handle}`,products:cj.products?.length??null};}
           catch{return{title:c.title,path:`/collections/${c.handle}`,products:null};}
         }));
         return {domain,platform:'shopify',collections:withCounts};
