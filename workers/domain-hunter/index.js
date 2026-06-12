@@ -155,13 +155,42 @@ async function findCandidatesFromCrawl(niche, env) {
   // Strategy 2 — Seeds FR e-commerce connus (découverte immédiate sans API)
   const NICHE_SEEDS = {
     ecommerce: [
+      // Leaders FR WooCommerce (analysés)
       'mon-blouson.com','mon-habit-chauffant.com','mes-portefeuilles.com',
       'applique-tendance.com','monpolaire.com','malampedechevet.com',
       'comptoir-des-lampes.com','la-maison-du-porte-cle.com',
       'instants-plaisirs.com','monbijouperso.fr','retourdeplage.fr',
-      'naturebelle.fr','homeluxe.fr','mon-porte-clef.fr','cotemaison.fr',
-      'robes-cocktail.fr','jupe-leopard.fr','jupeblanche.fr','jupecuir.fr',
-      'robe-midi.fr','wikimonde.com','tentree.com','sweetleaf.com',
+      // Leaders FR Shopify (analysés)
+      'jupeblanche.fr','jupecuir.fr','robe-midi.fr','jupe-leopard.fr',
+      'robes-cocktail.fr','homeluxe.fr','tentree.com',
+      // Mode FR Shopify — grands catalogues
+      'balzac-paris.fr','kookai.fr','cabaia.fr','despetitshauts.com',
+      'monsieursimone.com','asphalte.com','elia-lingerie.com',
+      'balibaris.com','flotte.fr','wearejolies.com','avnier.com',
+      'nenes-paris.com','yade-paris.fr','soi-paris.com','maisonlabiche.com',
+      '17h10.com','maloe.co','makemylemonade.com','apneeswimwear.com',
+      'thebradery.com','volcom.fr','okan-studio.com',
+      // Bijoux / Accessoires FR
+      'pdpaola.com','stoneparis.com','joaillerie-lassalle.com',
+      'elisechalmin.com','charlie-paris.com','polene-paris.com',
+      'rsvp-paris.com','astreparis.com','hegid.com','angarde-shoes.com',
+      'caval.fr','edithetmarcel.fr','lespartisanes.com',
+      // Maison / Déco FR
+      'caravane.fr','thesocialitefamily.com','petitpan.com',
+      'maisonsarahlavoine.com','bonsoirs.com','snowehome.com',
+      'debeaulieu-paris.com','ouate-paris.com','slean.com',
+      // Beauté / Soins FR
+      'epycure.com','seasonly.fr','mercihandy.com','respire.co',
+      'oolution.com','dijo.fr','la-canopee.com','miumlab.com',
+      'ohmycream.com','myjoliecandle.com','unbottled.co','flowrette.com',
+      // Enfants / Famille FR
+      'joone.fr','looping-baby.com','tartine-et-chocolat.com',
+      'mylittleday.fr','leoetviolette.com','kidiwi-handmade.com',
+      // Alimentaire / Lifestyle FR
+      'shantybiscuits.com','canelas.fr','liv-happyfood.com',
+      'lefrenchbiscuit.fr','morphee.co','wopilo.com',
+      // Animaux / Sport
+      'petsochic.com','chienmondain.com','kiwamisports.com','pureslo.fr',
     ],
     seo_blog: ['backlinko.com','ahrefs.com/blog','neilpatel.com','moz.com/blog'],
     local_seo: [],
