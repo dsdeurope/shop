@@ -188,12 +188,39 @@ export default {
         const result = await analyzeMesh(body.domain, env);
         return respond(result);
       }
+      if (body.action === 'scrape-collections' && body.domain) {
+        return respond(await scrapeCollections(body.domain));
+      }
     }
 
     const result = await sequence(env);
     return respond(result);
   },
 };
+
+async function scrapeCollections(domain) {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  try {
+    const r = await fetch(`https://${domain}/collections.json?limit=250`, { headers:{'User-Agent':UA}, signal:AbortSignal.timeout(8000) });
+    if (r.ok) { const j=await r.json(); if (j.collections?.length) return {domain,platform:'shopify',collections:j.collections.map(c=>({title:c.title,path:`/collections/${c.handle}`,products:c.products_count}))}; }
+  } catch {}
+  const RX=/\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
+  try {
+    const r=await fetch(`https://${domain}`,{headers:{'User-Agent':UA,'Accept':'text/html'},signal:AbortSignal.timeout(12000)});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const html=await r.text(),seen=new Set(),list=[];
+    for (const m of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([^<]{2,60})<\/a>/gi)) {
+      let path;try{path=new URL(m[1],`https://${domain}`).pathname;}catch{continue;}
+      if (!RX.test(path))continue;
+      const key=path.replace(/\/+$/,'');
+      if (seen.has(key)||key.split('/').length>5)continue;
+      seen.add(key);
+      const title=m[2].trim().replace(/\s+/g,' ');
+      if (title&&title.length<70)list.push({title,path,products:null});
+    }
+    return {domain,platform:'html',collections:list};
+  } catch(e) { return {domain,error:e.message,collections:[]}; }
+}
 
 async function sequence(env) {
   const radarKeys = await env.KV.list({ prefix: 'radar:' });

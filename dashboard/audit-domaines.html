@@ -427,25 +427,6 @@ async function proxyFetch(url){
   }catch{}
   throw new Error('Proxy + Wayback inaccessibles');
 }
-async function tryShopify(domain){
-  try{const r=await fetch(`https://${domain}/collections.json?limit=250`,{signal:AbortSignal.timeout(6000)});
-    if(!r.ok)return null;const j=await r.json();
-    return j.collections?.map(c=>({title:c.title,path:`/collections/${c.handle}`,products:c.products_count}))||null;
-  }catch{return null;}
-}
-function parseCollections(html,domain){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  const RX=/\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
-  const seen=new Set(),list=[];
-  doc.querySelectorAll('a[href]').forEach(a=>{
-    let path;try{path=new URL(a.getAttribute('href'),`https://${domain}`).pathname;}catch{return;}
-    if(!RX.test(path))return;const key=path.replace(/\/+$/,'');
-    if(seen.has(key)||key.split('/').length>5)return;seen.add(key);
-    const title=a.textContent.trim().replace(/\s+/g,' ');
-    if(title&&title.length<70)list.push({title,path,products:null});
-  });
-  return list;
-}
 function mvpN(n){return n<=5?n:n<=15?Math.max(3,Math.ceil(n*.5)):n<=40?Math.max(5,Math.ceil(n*.3)):Math.max(8,Math.min(15,Math.ceil(n*.2)));}
 let _bp=null;
 
@@ -454,8 +435,12 @@ async function openScraper(domain){
   document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Analyse en cours…</div>';
   document.getElementById('scModal').classList.add('open');
   let cols;
-  try{cols=await tryShopify(domain);if(!cols){const html=await proxyFetch(`https://${domain}`);cols=parseCollections(html,domain);}}
-  catch(e){document.getElementById('scBody').innerHTML=`<div class="empty">❌ ${e.message}</div>`;return;}
+  try{
+    const r=await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'scrape-collections',domain}),signal:AbortSignal.timeout(20000)});
+    const d=await r.json();
+    if(!d.collections?.length)throw new Error(d.error||'Aucune collection détectée');
+    cols=d.collections;
+  }catch(e){document.getElementById('scBody').innerHTML=`<div class="empty">❌ ${e.message}</div>`;return;}
   const total=cols.length,mvp=mvpN(total),top=cols.slice(0,mvp);
   _bp={source:domain,scrapedAt:new Date().toISOString(),totalCollections:total,mvpCollections:mvp,mvpSelection:top,allCollections:cols,shopify_hint:'Admin > Products > Collections',woo_hint:'Products > Categories'};
   const pct=total?Math.round(mvp/total*100):0;
