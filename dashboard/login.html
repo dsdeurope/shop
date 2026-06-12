@@ -41,7 +41,7 @@
   <div class="lock">🔐</div>
   <div class="logo">Zenith<span>lab</span> V35</div>
   <div class="sub">Accès restreint — authentification requise</div>
-  <form id="form" onsubmit="submit(event)">
+  <form id="form" onsubmit="handleLogin(event)">
     <label for="pw">Mot de passe</label>
     <div class="input-wrap">
       <input type="password" id="pw" autocomplete="current-password" autofocus placeholder="••••••••••••">
@@ -68,7 +68,7 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-async function submit(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const btn = document.getElementById('btn');
   const err = document.getElementById('err');
