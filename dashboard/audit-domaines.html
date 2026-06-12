@@ -5,202 +5,212 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>V35 — Audit Domaines</title>
   <style>
-    :root{--bg:#0d0d0d;--surface:#111520;--border:#1e2535;--green:#00ff88;--yellow:#ffd700;--orange:#ff8c00;--red:#ff4444;--blue:#4488ff;--purple:#a855f7;--text:#e2e8f0;--muted:#64748b;}
+    :root{--bg:#0d0d0d;--surface:#111520;--border:#1e2535;--green:#00ff88;--yellow:#ffd700;--orange:#ff8c00;--red:#ff4444;--blue:#4488ff;--text:#e2e8f0;--muted:#64748b;}
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;}
     header{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:1rem;padding:.8rem 2rem;background:rgba(13,13,13,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
-    .logo{font-weight:700;font-size:1rem;color:var(--text);}.logo span{color:var(--orange);}
+    .logo{font-weight:700;color:var(--text);}.logo span{color:var(--orange);}
     nav a{color:var(--muted);text-decoration:none;font-size:.85rem;margin-left:1.5rem;transition:color .2s;}
     nav a:hover,nav a.active{color:var(--text);}
     .btn{padding:.4rem 1rem;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;transition:opacity .2s;}.btn:hover{opacity:.85;}
     .btn-refresh{background:var(--surface);border:1px solid var(--border);color:var(--text);margin-left:auto;}
     .cards{display:flex;gap:1rem;padding:1.5rem 2rem;flex-wrap:wrap;}
-    .card{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.5rem;}
-    .card-icon{font-size:1.4rem;margin-bottom:.4rem;}.card-n{font-size:1.8rem;font-weight:700;}
-    .card-l{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:3px;}
-    .card.prospection{border-color:rgba(0,255,136,.2);}.card.prospection .card-n{color:var(--green);}
-    .card.acquisition{border-color:rgba(255,140,0,.25);}.card.acquisition .card-n{color:var(--orange);}
+    .card{flex:1;min-width:190px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.4rem;}
+    .card-icon{font-size:1.3rem;margin-bottom:.3rem;}.card-n{font-size:1.7rem;font-weight:700;}
+    .card-l{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:2px;}
+    .card.p{border-color:rgba(0,255,136,.2);}.card.p .card-n{color:var(--green);}
+    .card.a{border-color:rgba(255,140,0,.25);}.card.a .card-n{color:var(--orange);}
     .section{margin:0 2rem 2rem;}
     .section-header{display:flex;align-items:center;gap:.8rem;padding:.8rem 0;border-bottom:2px solid var(--border);}
     .section-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
-    .section-count{font-size:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 10px;color:var(--muted);}
-    .section-search{margin-left:auto;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.3rem .7rem;border-radius:6px;font-size:.8rem;width:200px;}
+    .sc-cnt{font-size:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 10px;color:var(--muted);}
+    .sc-srch{margin-left:auto;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.3rem .7rem;border-radius:6px;font-size:.8rem;width:200px;}
     .t-prosp .section-title{color:var(--green);}.t-prosp .section-title::before{content:'📊 ';}
     .t-acq .section-title{color:var(--orange);}.t-acq .section-title::before{content:'🏷️ ';}
     .table-wrap{overflow-x:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:2rem;}
     table{width:100%;border-collapse:collapse;}
-    thead th{padding:.6rem 1rem;text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:rgba(30,37,53,.5);border-bottom:1px solid var(--border);white-space:nowrap;}
-    tbody td{padding:.65rem 1rem;border-bottom:1px solid #0f131a;vertical-align:middle;}
+    thead th{padding:.55rem .9rem;text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:rgba(30,37,53,.5);border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody td{padding:.6rem .9rem;border-bottom:1px solid #0f131a;vertical-align:middle;}
     tbody tr:last-child td{border-bottom:none;}tbody tr:hover td{background:#0a0d14;}
-    .diode{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:.68rem;font-weight:700;white-space:nowrap;}
+    .diode{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:700;white-space:nowrap;}
     .diode::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
     .d-orange{background:rgba(255,140,0,.12);color:var(--orange);border:1px solid rgba(255,140,0,.4);}.d-orange::before{background:var(--orange);animation:blink 1s infinite;}
     .d-yellow{background:rgba(255,215,0,.1);color:var(--yellow);border:1px solid rgba(255,215,0,.3);}.d-yellow::before{background:var(--yellow);}
     .d-green{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.25);}.d-green::before{background:var(--green);}
     .d-grey{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2);}.d-grey::before{background:var(--muted);}
     @keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
-    .avail-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.68rem;font-weight:600;}
+    .avail-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.65rem;font-weight:600;}
     .av-actif{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.2);}
     .av-disponible{background:rgba(255,140,0,.1);color:var(--orange);border:1px solid rgba(255,140,0,.3);}
     .av-parke{background:rgba(255,215,0,.1);color:var(--yellow);border:1px solid rgba(255,215,0,.25);}
     .av-expire{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25);}
     .av-other{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2);}
-    .btn-sm{padding:3px 9px;border-radius:6px;font-size:.7rem;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .2s;}
-    .btn-seq{border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.1);color:#a855f7;}.btn-seq:hover{background:rgba(168,85,247,.25);}
+    .btn-sm{padding:2px 8px;border-radius:5px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .2s;white-space:nowrap;}
+    .btn-seq{border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.1);color:#a855f7;}.btn-seq:hover,.btn-seq.running{background:rgba(168,85,247,.25);}
     .btn-seq.running{opacity:.6;cursor:not-allowed;}
-    .btn-price{border-color:rgba(255,140,0,.4);background:rgba(255,140,0,.1);color:var(--orange);}.btn-price:hover{background:rgba(255,140,0,.2);}
-    .btn-check{border-color:rgba(68,136,255,.4);background:rgba(68,136,255,.1);color:var(--blue);font-size:.65rem;}.btn-check:hover{background:rgba(68,136,255,.2);}
-    .btn-edit{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:0 2px;line-height:1;transition:color .2s;}.btn-edit:hover{color:var(--text);}
-    .ca-val{font-size:.78rem;color:var(--green);font-weight:600;}
-    .comp-easy{color:var(--green);font-weight:700;font-size:.78rem;}
-    .comp-med{color:var(--yellow);font-weight:700;font-size:.78rem;}
-    .comp-hard{color:var(--red);font-weight:700;font-size:.78rem;}
-    .alt-wrap{display:flex;align-items:center;gap:5px;}
-    .alt-domain{font-size:.72rem;color:var(--muted);font-family:'Courier New',monospace;}
-    .domain-link{color:var(--text);text-decoration:none;font-weight:600;font-size:.83rem;}.domain-link:hover{color:var(--blue);}
-    .fp-score{font-size:.8rem;}.fp-hi{color:var(--orange);}.fp-med{color:var(--yellow);}.fp-lo{color:var(--muted);}
-    .wb{font-size:.75rem;color:var(--muted);}.wb.ok{color:var(--green);}
-    .empty,.loading{text-align:center;padding:3rem 2rem;color:var(--muted);font-size:.85rem;}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:.4rem;}
-    @keyframes spin{to{transform:rotate(360deg);}}
-    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e2535;border:1px solid var(--border);border-radius:8px;padding:.7rem 1.2rem;font-size:.82rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;}
-    .toast.show{opacity:1;}
     .btn-scrape{border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.1);color:#fbbf24;}.btn-scrape:hover{background:rgba(251,191,36,.2);}
+    .btn-scrape:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.8);}
+    .btn-check{border-color:rgba(68,136,255,.4);background:rgba(68,136,255,.1);color:var(--blue);}.btn-check:hover{background:rgba(68,136,255,.2);}
+    .btn-buy{border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.08);color:var(--green);}.btn-buy:hover{background:rgba(0,255,136,.15);}
+    .btn-detect{border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.07);color:#fbbf24;font-size:.65rem;}
+    .btn-edit{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.78rem;padding:0 2px;transition:color .2s;}.btn-edit:hover{color:var(--text);}
+    .ca-val{font-size:.77rem;color:var(--green);font-weight:600;}
+    .comp-easy{color:var(--green);font-weight:700;font-size:.77rem;}
+    .comp-med{color:var(--yellow);font-weight:700;font-size:.77rem;}
+    .comp-hard{color:var(--red);font-weight:700;font-size:.77rem;}
+    .alt-row{display:flex;align-items:center;gap:3px;margin-bottom:3px;}
+    .alt-row:last-child{margin-bottom:0;}
+    .alt-d{font-size:.68rem;color:var(--muted);font-family:'Courier New',monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .domain-link{color:var(--text);text-decoration:none;font-weight:600;font-size:.82rem;}.domain-link:hover{color:var(--blue);}
+    .fp-score{font-size:.78rem;}.fp-hi{color:var(--orange);}.fp-med{color:var(--yellow);}.fp-lo{color:var(--muted);}
+    .wb{font-size:.73rem;color:var(--muted);}.wb.ok{color:var(--green);}
+    .empty,.loading{text-align:center;padding:3rem 2rem;color:var(--muted);font-size:.85rem;}
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:.4rem;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e2535;border:1px solid var(--border);border-radius:8px;padding:.7rem 1.2rem;font-size:.82rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:280px;}
+    .toast.show{opacity:1;}
     .sc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;display:none;align-items:center;justify-content:center;}
     .sc-overlay.open{display:flex;}
     .sc-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;}
     .sc-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);font-size:.95rem;font-weight:700;}
     .sc-body{padding:1.5rem;}
     .sc-stat{display:flex;gap:1rem;margin-bottom:1.2rem;flex-wrap:wrap;}
-    .sc-card{flex:1;min-width:130px;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;}
-    .sc-card-n{font-size:1.6rem;font-weight:700;}.sc-card-l{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
-    .sc-list{list-style:none;display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;margin-bottom:.5rem;}
-    .sc-list li{padding:.4rem .7rem;background:#0d0d0d;border-radius:6px;font-size:.77rem;display:flex;align-items:center;gap:.6rem;}
-    .sc-idx{width:22px;font-size:.65rem;color:var(--muted);text-align:right;flex-shrink:0;}
-    .sc-path{margin-left:auto;font-size:.65rem;color:var(--muted);font-family:'Courier New',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+    .sc-card{flex:1;min-width:120px;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;}
+    .sc-card-n{font-size:1.6rem;font-weight:700;}.sc-card-l{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+    .sc-list{list-style:none;display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto;margin-bottom:.5rem;}
+    .sc-list li{padding:.35rem .7rem;background:#0d0d0d;border-radius:6px;font-size:.75rem;display:flex;align-items:center;gap:.5rem;}
+    .sc-idx{width:20px;font-size:.63rem;color:var(--muted);text-align:right;flex-shrink:0;}
+    .sc-path{margin-left:auto;font-size:.63rem;color:var(--muted);font-family:'Courier New',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
     .sc-actions{display:flex;gap:.8rem;margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);flex-wrap:wrap;}
-    .btn-dl{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:1px solid rgba(68,136,255,.5);background:rgba(68,136,255,.15);color:var(--blue);transition:opacity .2s;}.btn-dl:hover{opacity:.8;}
-    .btn-deploy{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:1px solid rgba(0,255,136,.5);background:rgba(0,255,136,.15);color:var(--green);transition:opacity .2s;}.btn-deploy:hover{opacity:.8;}
+    .btn-dl{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(68,136,255,.5);background:rgba(68,136,255,.15);color:var(--blue);}
+    .btn-deploy{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(0,255,136,.5);background:rgba(0,255,136,.15);color:var(--green);}
   </style>
 </head>
 <body>
-
 <header>
   <a href="/" class="logo">Zenith<span>lab</span></a>
   <nav>
-    <a href="/">Dashboard</a>
-    <a href="/domaines.html">Domaines</a>
-    <a href="/audit-domaines.html" class="active">Audit</a>
-    <a href="/spots.html">Spots</a>
+    <a href="/">Dashboard</a><a href="/domaines.html">Domaines</a>
+    <a href="/audit-domaines.html" class="active">Audit</a><a href="/spots.html">Spots</a>
   </nav>
   <button class="btn btn-refresh" onclick="load()">↻ Actualiser</button>
 </header>
 
 <div class="cards">
-  <div class="card prospection"><div class="card-icon">📊</div><div class="card-n" id="cntProsp">—</div><div class="card-l">Sites leaders — Prospection</div></div>
-  <div class="card acquisition"><div class="card-icon">🏷️</div><div class="card-n" id="cntAcq">—</div><div class="card-l">Domaines à acquérir</div></div>
+  <div class="card p"><div class="card-icon">📊</div><div class="card-n" id="cntProsp">—</div><div class="card-l">Sites leaders</div></div>
+  <div class="card a"><div class="card-icon">🏷️</div><div class="card-n" id="cntAcq">—</div><div class="card-l">À acquérir</div></div>
   <div class="card" style="border-color:rgba(255,68,68,.2)"><div class="card-icon">🟠</div><div class="card-n" id="cntAlert" style="color:var(--orange)">—</div><div class="card-l">Alertes achat</div></div>
-  <div class="card" style="border-color:rgba(0,255,136,.2)"><div class="card-icon">📈</div><div class="card-n" id="cntCA" style="color:var(--green);font-size:1.3rem">—</div><div class="card-l">CA Estimé Total / mois *</div></div>
+  <div class="card" style="border-color:rgba(0,255,136,.2)"><div class="card-icon">📈</div><div class="card-n" id="cntCA" style="color:var(--green);font-size:1.2rem">—</div><div class="card-l">CA Estimé / mois *</div></div>
 </div>
 
 <div class="section t-prosp">
   <div class="section-header">
     <span class="section-title">Sites Leaders (Prospection)</span>
-    <span class="section-count" id="countProsp">0</span>
-    <input class="section-search" type="text" placeholder="Filtrer…" oninput="filterTable('prosp',this.value)">
+    <span class="sc-cnt" id="countProsp">0</span>
+    <input class="sc-srch" type="text" placeholder="Filtrer…" oninput="filterTable('prosp',this.value)">
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Domaine</th><th>Niche Sémantique</th><th>Diode</th><th>FP</th><th>Score</th><th>WB</th>
-        <th title="Chiffre d'affaires estimé/mois — trafic×CR×AOV (*estimé)">CA Estimé/mois</th>
-        <th title="Facilité d'entrée concurrentielle: 1=facile, 10=très difficile">Compétition</th>
-        <th>Action</th>
-      </tr></thead>
-      <tbody id="tbodyProsp"><tr><td colspan="9" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
-    </table>
-  </div>
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Domaine</th><th>Niches</th><th>Diode</th><th>FP</th>
+      <th>Score</th><th>WB</th><th>CA / mois</th><th>Compétition</th><th>Actions</th>
+    </tr></thead>
+    <tbody id="tbodyProsp"><tr><td colspan="9" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
+  </table></div>
 </div>
 
 <div class="section t-acq">
   <div class="section-header">
-    <span class="section-title">Domaines à Acquérir (Disponibles)</span>
-    <span class="section-count" id="countAcq">0</span>
-    <input class="section-search" type="text" placeholder="Filtrer…" oninput="filterTable('acq',this.value)">
+    <span class="section-title">Domaines à Acquérir</span>
+    <span class="sc-cnt" id="countAcq">0</span>
+    <input class="sc-srch" type="text" placeholder="Filtrer…" oninput="filterTable('acq',this.value)">
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Domaine</th><th>Niche Sémantique</th><th>Disponibilité</th><th>Diode</th><th>Score</th><th>WB</th>
-        <th title="Domaine sémantiquement proche disponible à enregistrer">Alternative Acquisition</th>
-        <th>Action</th>
-      </tr></thead>
-      <tbody id="tbodyAcq"><tr><td colspan="8" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
-    </table>
-  </div>
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Domaine</th><th>Niches</th><th>Disponibilité</th><th>Diode</th>
+      <th>Score</th><th>WB</th><th>3 Alternatives libres</th><th>Acheter</th>
+    </tr></thead>
+    <tbody id="tbodyAcq"><tr><td colspan="8" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
+  </table></div>
 </div>
 
-<div id="scModal" class="sc-overlay" onclick="closeScModal()">
+<div id="scModal" class="sc-overlay" onclick="closeSc()">
   <div class="sc-box" onclick="event.stopPropagation()">
     <div class="sc-head">
-      <span>🔬 Analyse de Clonage — <span id="scDomain" style="color:var(--blue)"></span></span>
-      <button onclick="closeScModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.5rem;line-height:1;padding:0">×</button>
+      <span>🔬 Analyse — <span id="scDomain" style="color:var(--blue)"></span></span>
+      <button onclick="closeSc()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.4rem;padding:0">×</button>
     </div>
-    <div id="scBody" class="sc-body"><div class="loading"><span class="spinner"></span>Scraping en cours…</div></div>
+    <div id="scBody" class="sc-body"></div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-const API_HUNTER = 'https://v35-domain-hunter.ernestpedanou.workers.dev';
-const API_SEQ    = 'https://v35-sequenceur.ernestpedanou.workers.dev';
-const REGISTRAR  = 'https://www.ovh.com/fr/domaines/?domain=';
+const API_HUNTER='https://v35-domain-hunter.ernestpedanou.workers.dev';
+const API_SEQ='https://v35-sequenceur.ernestpedanou.workers.dev';
+const REGISTRAR='https://www.ovh.com/fr/domaines/?domain=';
+let allProsp=[],allAcq=[];
 
-let allProsp = [], allAcq = [];
+// ── Niche data ──
+const NM={'Lingerie':{CR:.028,AOV:58},'Mode Femme':{CR:.022,AOV:72},'Mode Homme':{CR:.018,AOV:85},
+  'Luminaires':{CR:.015,AOV:145},'Décoration':{CR:.014,AOV:110},'Beauté':{CR:.025,AOV:48},
+  'Bien-être':{CR:.020,AOV:62},'Sport':{CR:.020,AOV:95},'Bijoux':{CR:.018,AOV:120},
+  'Bagagerie':{CR:.016,AOV:95},'Maroquinerie':{CR:.015,AOV:130},'Accessoires':{CR:.020,AOV:58},
+  'High-Tech':{CR:.014,AOV:210},'Enfants':{CR:.022,AOV:65},'Alimentaire':{CR:.030,AOV:38},
+  'Animaux':{CR:.025,AOV:42},'Voyage':{CR:.015,AOV:155},'Auto':{CR:.012,AOV:180},
+  'default':{CR:.018,AOV:50}};
 
-// ── Niche config (CR = taux conversion, AOV = panier moyen €) ──
-const NM = {
-  'Lingerie'   :{CR:.028,AOV:58 },'Mode Femme':{CR:.022,AOV:72 },'Mode Homme':{CR:.018,AOV:85 },
-  'Luminaires' :{CR:.015,AOV:145},'Décoration' :{CR:.014,AOV:110},'Beauté'    :{CR:.025,AOV:48 },
-  'Sport'      :{CR:.020,AOV:95 },'Bijoux'     :{CR:.018,AOV:120},'Enfants'   :{CR:.022,AOV:65 },
-  'Alimentaire':{CR:.030,AOV:38 },'Animaux'    :{CR:.025,AOV:42 },'Auto'      :{CR:.012,AOV:180},
-  'default'    :{CR:.018,AOV:50 },
-};
-const NK = {
-  'Lingerie'   :['lingerie','dessous','soutien','culotte'],
-  'Mode Femme' :['robe','femme','mode','fashion','vetements'],
-  'Mode Homme' :['homme','men','menswear','costume'],
-  'Luminaires' :['lampe','lumiere','luminaire','eclairage'],
-  'Décoration' :['deco','decoration','maison','meuble'],
-  'Beauté'     :['beaute','soin','cosmetique','parfum'],
-  'Sport'      :['sport','trail','bike','velo','fitness'],
-  'Bijoux'     :['bijou','bague','collier','bracelet'],
-  'Enfants'    :['enfant','bebe','kids','jouet'],
-  'Alimentaire':['food','epicerie','biscuit','cafe','bio'],
-  'Animaux'    :['animal','chien','chat','pet'],
-  'Auto'       :['auto','moto','voiture','pieces'],
-};
-const NC = {
-  'Lingerie':'#f472b6','Mode Femme':'#c084fc','Mode Homme':'#818cf8',
-  'Luminaires':'#fbbf24','Décoration':'#fb923c','Beauté':'#f43f5e',
-  'Sport':'#34d399','Bijoux':'#a78bfa','Enfants':'#60a5fa',
-  'Alimentaire':'#4ade80','Animaux':'#f97316','Auto':'#94a3b8','E-commerce':'#4488ff',
-};
+const NK={'Lingerie':['lingerie','dessous','soutien','culotte','bra'],
+  'Mode Femme':['robe','femme','mode','fashion','vetements'],'Mode Homme':['homme','men','menswear','costume'],
+  'Luminaires':['lampe','lumiere','luminaire','eclairage'],'Décoration':['deco','decoration','maison','meuble','canape'],
+  'Beauté':['beaute','soin','cosmetique','parfum','serum'],'Bien-être':['bienetre','zen','yoga','relaxation','sophrologie'],
+  'Sport':['sport','trail','bike','velo','fitness','running'],'Bijoux':['bijou','bague','collier','bracelet'],
+  'Bagagerie':['bagage','sac','valise','cabai','trolley','backpack'],'Maroquinerie':['cuir','maroquin','portefeuille','ceinture'],
+  'Accessoires':['accessoire','chapeau','echarpe','gant','lunettes'],'High-Tech':['tech','electronique','gaming','smartphone'],
+  'Enfants':['enfant','bebe','kids','jouet'],'Alimentaire':['food','epicerie','biscuit','cafe','bio'],
+  'Animaux':['animal','chien','chat','pet'],'Voyage':['voyage','travel','camping','trek'],
+  'Auto':['auto','moto','voiture','pieces','tuning']};
+
+const NC={'Lingerie':'#f472b6','Mode Femme':'#c084fc','Mode Homme':'#818cf8','Luminaires':'#fbbf24',
+  'Décoration':'#fb923c','Beauté':'#f43f5e','Bien-être':'#2dd4bf','Sport':'#34d399',
+  'Bijoux':'#a78bfa','Bagagerie':'#60a5fa','Maroquinerie':'#a16207','Accessoires':'#e879f9',
+  'High-Tech':'#38bdf8','Enfants':'#4ade80','Alimentaire':'#84cc16','Animaux':'#f97316',
+  'Voyage':'#06b6d4','Auto':'#94a3b8'};
 
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,' ');}
 
-function detectNiche(domain){
-  const parts = norm(domain.replace(/\.(fr|com|net|org|eu|io)$/,'')).split(/[-_. ]+/);
-  for(const [n,ws] of Object.entries(NK)){
-    if(parts.some(p => ws.some(w => p===w || (p.length>3 && (p.includes(w)||w.includes(p))))))return n;
+function detectNiches(domain){
+  const parts=norm(domain.replace(/\.(fr|com|net|org|eu|io)$/,'')).split(/[-_. ]+/);
+  const sc={};
+  for(const[n,ws]of Object.entries(NK))for(const p of parts)for(const w of ws){
+    if(!p||p.length<2)continue;
+    if(p===w)sc[n]=(sc[n]||0)+3;
+    else if(p.length>=3&&(p.includes(w)||w.includes(p)&&w.length>=4))sc[n]=(sc[n]||0)+1;
   }
-  return 'E-commerce';
+  const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).filter(([,s])=>s>=1).map(([n])=>n).slice(0,3);
+  return r.length?r:null;
 }
 
-function nicheBadge(n){
-  const c = NC[n]||'#4488ff';
-  return `<span style="padding:2px 7px;border-radius:8px;font-size:.67rem;font-weight:600;background:${c}18;color:${c};border:1px solid ${c}33">${n}</span>`;
+function nichesTags(domain){
+  const cached=JSON.parse(localStorage.getItem('nc_'+domain)||'null');
+  const niches=cached||detectNiches(domain);
+  if(!niches) return`<button class="btn-sm btn-detect" onclick="detectLive('${domain}')">⚡ Analyser</button>`;
+  return niches.map((n,i)=>{const c=NC[n]||'#64748b';
+    return`<span style="display:inline-block;margin:1px;padding:2px 7px;border-radius:8px;font-size:.65rem;font-weight:600;background:${c}${i?'12':'22'};color:${c};border:1px solid ${c}${i?'22':'44'}">${n}</span>`;
+  }).join('');
+}
+
+async function detectLive(domain){
+  showToast('Détection niche en cours…');
+  try{
+    const html=await proxyFetch(`https://${domain}`);
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const text=[doc.title,...[...doc.querySelectorAll('meta[name="description"],h1,h2,nav a')].slice(0,15).map(el=>el.content||el.textContent)].join(' ');
+    const sc={},tn=norm(text);
+    for(const[n,ws]of Object.entries(NK))for(const w of ws){const c=(tn.match(new RegExp(w,'g'))||[]).length;if(c)sc[n]=(sc[n]||0)+c;}
+    const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
+    if(r.length){localStorage.setItem('nc_'+domain,JSON.stringify(r));renderProsp(allProsp);showToast(r.join(' · '));}
+    else showToast('Niche non identifiable — essayez SCRAPER');
+  }catch{showToast('Erreur proxy — réessayez');}
 }
 
 // ── CA Estimé ──
@@ -208,65 +218,72 @@ function getOv(d){try{return JSON.parse(localStorage.getItem('ca_'+d));}catch{re
 function setOv(d,cr,aov){localStorage.setItem('ca_'+d,JSON.stringify({cr:+cr,aov:+aov}));}
 
 function estimTraf(d){
-  const fp=d.fpScore||0, sn=d.wayback?.snapshots||0;
-  if(fp>=60&&sn>=20)return 20000;
-  if(fp>=40&&sn>=10)return 8000;
+  const fp=d.fpScore||0,sn=d.wayback?.snapshots||0;
+  const boost=JSON.parse(localStorage.getItem('wbr_'+d.domain)||'null');
+  const m=boost==='active'?2:1;
+  if(fp>=70||sn>=50)return 50000*m;
+  if(fp>=60&&sn>=20)return 20000*m;
+  if(fp>=40&&sn>=10)return 8000*m;
   if(fp>=30&&sn>=5) return 3000;
   if(fp>=20)        return 1000;
   return 300;
 }
-
 function caData(d){
-  const n=detectNiche(d.domain), m=NM[n]||NM.default, ov=getOv(d.domain);
-  const cr=ov?.cr||m.CR, aov=ov?.aov||m.AOV;
-  return {ca:Math.round(estimTraf(d)*cr*aov), cr, aov};
+  const niches=detectNiches(d.domain)||[],m=NM[niches[0]]||NM.default,ov=getOv(d.domain);
+  const cr=ov?.cr||m.CR,aov=ov?.aov||m.AOV;
+  return{ca:Math.round(estimTraf(d)*cr*aov),cr,aov};
 }
-
 function fmtCA(ca){return ca.toLocaleString('fr-FR')+' €';}
+
+async function refreshWBActive(){
+  const today=new Date();
+  const from=new Date(today-30*86400000).toISOString().slice(0,10).replace(/-/g,'');
+  for(const d of allProsp.slice(0,8)){
+    if(localStorage.getItem('wbr_'+d.domain))continue;
+    try{
+      const r=await fetch(`https://web.archive.org/cdx/search/cdx?url=${d.domain}&output=json&limit=1&fl=timestamp&from=${from}`,{signal:AbortSignal.timeout(4000)});
+      const j=await r.json();
+      if(j.length>1){localStorage.setItem('wbr_'+d.domain,'active');
+        const cell=document.getElementById('ca_'+d.domain.replace(/\W/g,'_'));
+        if(cell){const{ca,cr,aov}=caData(d);cell.innerHTML=`<span class="ca-val" title="Trafic actif (WB récent)">${fmtCA(ca)} ↑*</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button>`;}
+      }
+    }catch{}
+  }
+}
 
 // ── Compétition ──
 function competScore(d){
-  const fp=d.fpScore||0, sn=d.wayback?.snapshots||0;
-  const fpPt=Math.round(fp/14);
-  const wbPt=sn>=50?3:sn>=20?2:sn>=5?1:0;
-  return Math.max(1,Math.min(10,fpPt+wbPt));
+  const fp=d.fpScore||0,sn=d.wayback?.snapshots||0;
+  return Math.max(1,Math.min(10,Math.round(fp/14)+(sn>=50?3:sn>=20?2:sn>=5?1:0)));
 }
 function competCell(s){
   const cls=s<=3?'comp-easy':s<=6?'comp-med':'comp-hard';
-  const lbl=s<=3?'Facile':s<=6?'Moyen':'Difficile';
-  return `<span class="${cls}" title="Facilité d'entrée: ${s}/10">${s}/10 ${lbl}</span>`;
+  return`<span class="${cls}" title="Facilité entrée ${s}/10">${s}/10 ${s<=3?'Facile':s<=6?'Moyen':'Difficile'}</span>`;
 }
 
-// ── Alternative Acquisition ──
-function suggestAlt(domain){
+// ── Alternatives (Acquisition) ──
+function suggestAlts(domain){
   const base=domain.replace(/\.(fr|com|net|org|eu)$/,'').split('-');
   const kw=base.find(p=>p.length>3&&!/^(www|shop|boutique|store|paris|france|la|le|les)$/.test(p))||base[0];
   const tld=domain.endsWith('.fr')?'.fr':'.com';
-  return `boutique-${kw}${tld}`;
+  return[`boutique-${kw}${tld}`,`${kw}-pro${tld}`,`les-${kw}s${tld}`].filter(d=>d!==domain);
 }
-
-async function checkDispo(altDomain, btn){
-  btn.disabled=true; btn.textContent='…';
+async function checkDispo(dom,btn){
+  btn.disabled=true;btn.textContent='…';
   try{
-    const r=await fetch(`https://cloudflare-dns.com/dns-query?name=${altDomain}&type=A`,
-      {headers:{Accept:'application/dns-json'}});
-    const j=await r.json();
-    const free=j.Status===3||!j.Answer||!j.Answer.length;
-    btn.textContent=free?'✅ Libre':'🔴 Pris';
-    btn.style.color=free?'var(--green)':'var(--red)';
+    const r=await fetch(`https://cloudflare-dns.com/dns-query?name=${dom}&type=A`,{headers:{Accept:'application/dns-json'}});
+    const j=await r.json();const free=j.Status===3||!j.Answer?.length;
+    btn.textContent=free?'✅':'🔴';btn.style.color=free?'var(--green)':'var(--red)';
     btn.style.borderColor=free?'rgba(0,255,136,.4)':'rgba(255,68,68,.4)';
-  }catch{btn.textContent='? Réseau';}
+  }catch{btn.textContent='?';}
   btn.disabled=false;
 }
 
-// ── Helpers ──
+// ── Common ──
 function getType(d){return d.type||(d.availability==='actif'?'PROSPECTION':'ACQUISITION');}
-function availClass(a){
-  return{actif:'av-actif',disponible:'av-disponible','parké':'av-parke','expiré':'av-expire'}[a]||'av-other';
-}
+function availClass(a){return{actif:'av-actif',disponible:'av-disponible','parké':'av-parke','expiré':'av-expire'}[a]||'av-other';}
 function fpClass(s){return s>=50?'fp-hi':s>=30?'fp-med':'fp-lo';}
 
-// ── Load ──
 async function load(){
   try{
     const r=await fetch(`${API_HUNTER}?action=report`);
@@ -274,47 +291,47 @@ async function load(){
     const all=(data.opportunities||[]).filter(d=>!d.domain.includes('/'));
     allProsp=all.filter(d=>getType(d)==='PROSPECTION');
     allAcq  =all.filter(d=>getType(d)==='ACQUISITION');
-    renderCards();
-    renderProsp(allProsp);
-    renderAcq(allAcq);
+    renderCards();renderProsp(allProsp);renderAcq(allAcq);
+    setTimeout(refreshWBActive,2000);
   }catch{
-    document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">Impossible de joindre l\'API.</td></tr>';
-    document.getElementById('tbodyAcq').innerHTML  ='<tr><td colspan="8" class="empty">Impossible de joindre l\'API.</td></tr>';
+    document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">API inaccessible.</td></tr>';
+    document.getElementById('tbodyAcq').innerHTML='<tr><td colspan="8" class="empty">API inaccessible.</td></tr>';
   }
 }
 
 function renderCards(){
+  const all=[...allProsp,...allAcq];
   document.getElementById('cntProsp').textContent=allProsp.length;
   document.getElementById('cntAcq').textContent=allAcq.length;
-  document.getElementById('cntAlert').textContent=[...allProsp,...allAcq].filter(d=>d.diode?.color==='orange').length;
-  const totalCA=allProsp.reduce((s,d)=>s+caData(d).ca,0);
-  document.getElementById('cntCA').textContent=fmtCA(totalCA)+' *';
+  document.getElementById('cntAlert').textContent=all.filter(d=>d.diode?.color==='orange').length;
+  document.getElementById('cntCA').textContent=fmtCA(allProsp.reduce((s,d)=>s+caData(d).ca,0))+' *';
 }
 
 function filterTable(type,val){
   const src=type==='prosp'?allProsp:allAcq;
-  const f=val.toLowerCase();
-  const out=f?src.filter(d=>d.domain.toLowerCase().includes(f)):src;
-  if(type==='prosp')renderProsp(out); else renderAcq(out);
+  const f=val.toLowerCase(),out=f?src.filter(d=>d.domain.toLowerCase().includes(f)):src;
+  if(type==='prosp')renderProsp(out);else renderAcq(out);
 }
 
 function renderProsp(list){
   document.getElementById('countProsp').textContent=list.length;
   const sorted=[...list].sort((a,b)=>(b.fpScore||0)-(a.fpScore||0));
-  if(!sorted.length){document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">Aucun site leader trouvé.</td></tr>';return;}
+  if(!sorted.length){document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">Aucun site leader.</td></tr>';return;}
   document.getElementById('tbodyProsp').innerHTML=sorted.map(d=>{
-    const dc=d.diode?.color||'grey', wb=d.wayback||{};
-    const n=detectNiche(d.domain), {ca,cr,aov}=caData(d), cs=competScore(d);
-    return `<tr>
+    const dc=d.diode?.color||'grey',wb=d.wayback||{};
+    const{ca,cr,aov}=caData(d),cs=competScore(d);
+    const hasHistory=(d.fpScore||0)>0||(wb.snapshots||0)>0;
+    const caId='ca_'+d.domain.replace(/\W/g,'_');
+    return`<tr>
       <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
-      <td>${nicheBadge(n)}</td>
+      <td>${nichesTags(d.domain)}</td>
       <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
       <td><span class="fp-score ${fpClass(d.fpScore||0)}">${d.fpScore||0}%</span></td>
-      <td style="font-size:.78rem">${d.totalScore||0}/100</td>
+      <td style="font-size:.76rem">${d.totalScore||0}/100</td>
       <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots?`✓ ${wb.snapshots}`:'—'}</td>
-      <td><span class="ca-val">${fmtCA(ca)} *</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="Modifier CR (${(cr*100).toFixed(1)}%) / AOV (${aov}€)">✎</button></td>
+      <td id="${caId}"><span class="ca-val">${fmtCA(ca)} *</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button></td>
       <td>${competCell(cs)}</td>
-      <td><div style="display:flex;gap:4px"><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">📊 Analyser</button><button class="btn-sm btn-scrape" onclick="openScraper('${d.domain}')">🔬 Scraper</button></div></td>
+      <td><div style="display:flex;gap:3px"><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">📊</button><button class="btn-sm btn-scrape" ${hasHistory?'':`disabled title="Aucun historique — site potentiellement hors index"`} onclick="${hasHistory?`openScraper('${d.domain}')`:''}">🔬 Scraper</button></div></td>
     </tr>`;
   }).join('');
 }
@@ -325,174 +342,114 @@ function renderAcq(list){
     const pa=a.diode?.priority||9,pb=b.diode?.priority||9;
     return pa!==pb?pa-pb:(b.wayback?.snapshots||0)-(a.wayback?.snapshots||0);
   });
-  if(!sorted.length){document.getElementById('tbodyAcq').innerHTML='<tr><td colspan="8" class="empty">Aucun domaine à acquérir détecté.</td></tr>';return;}
+  if(!sorted.length){document.getElementById('tbodyAcq').innerHTML='<tr><td colspan="8" class="empty">Aucun domaine à acquérir.</td></tr>';return;}
   document.getElementById('tbodyAcq').innerHTML=sorted.map(d=>{
-    const dc=d.diode?.color||'grey', wb=d.wayback||{};
-    const n=detectNiche(d.domain), alt=suggestAlt(d.domain);
-    const eid='chk-'+d.domain.replace(/[^a-z0-9]/g,'-');
-    return `<tr>
+    const dc=d.diode?.color||'grey',wb=d.wayback||{};
+    const alts=suggestAlts(d.domain);
+    const altHTML=alts.map(alt=>{
+      const eid='c'+alt.replace(/[^a-z0-9]/g,'');
+      return`<div class="alt-row"><span class="alt-d">${alt}</span><button id="${eid}" class="btn-sm btn-check" onclick="checkDispo('${alt}',this)" style="padding:1px 6px">✓</button><button class="btn-sm btn-buy" onclick="window.open('${REGISTRAR}${alt}','_blank')" style="padding:1px 6px">💰</button></div>`;
+    }).join('');
+    return`<tr>
       <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
-      <td>${nicheBadge(n)}</td>
+      <td>${nichesTags(d.domain)}</td>
       <td><span class="avail-badge ${availClass(d.availability)}">${d.availability||'inconnu'}</span></td>
       <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
-      <td style="font-size:.78rem">${d.totalScore||0}/100</td>
+      <td style="font-size:.76rem">${d.totalScore||0}/100</td>
       <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots?`✓ ${wb.snapshots}`:'—'}</td>
-      <td><div class="alt-wrap"><span class="alt-domain">${alt}</span><button id="${eid}" class="btn-sm btn-check" onclick="checkDispo('${alt}',this)">Check</button></div></td>
-      <td><button class="btn-sm btn-price" onclick="buyDomain('${d.domain}',this)">💰 Prix</button></td>
+      <td style="min-width:220px">${altHTML}</td>
+      <td><button class="btn-sm btn-seq" style="border-color:rgba(255,140,0,.4);background:rgba(255,140,0,.1);color:var(--orange)" onclick="buyDomain('${d.domain}',this)">💰 Prix</button></td>
     </tr>`;
   }).join('');
 }
 
-async function triggerSeq(domain, btn){
-  btn.classList.add('running'); btn.textContent='⏳…';
+async function triggerSeq(domain,btn){
+  btn.classList.add('running');btn.textContent='⏳';
   try{
-    await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({domain,action:'analyze-mesh'})});
-    btn.textContent='✓ Lancé'; btn.style.color='var(--green)'; btn.style.borderColor='rgba(0,255,136,.4)';
-    showToast('Séquenceur lancé sur '+domain);
-  }catch{
-    btn.textContent='✗ Erreur'; btn.style.color='var(--red)'; btn.classList.remove('running');
-  }
+    await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,action:'analyze-mesh'})});
+    btn.textContent='✓';btn.style.color='var(--green)';btn.style.borderColor='rgba(0,255,136,.4)';
+    showToast('Séquenceur lancé: '+domain);
+  }catch{btn.textContent='✗';btn.style.color='var(--red)';btn.classList.remove('running');}
 }
 
-function buyDomain(domain, btn){
+function buyDomain(domain,btn){
   window.open(REGISTRAR+encodeURIComponent(domain),'_blank');
-  btn.style.cssText='border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08);color:var(--green)';
-  btn.textContent='✓ OVH';
+  btn.style.cssText='border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08);color:var(--green)';btn.textContent='✓ OVH';
 }
 
 function editCA(domain){
-  const d=allProsp.find(x=>x.domain===domain);
-  if(!d)return;
-  const {cr,aov}=caData(d);
+  const d=allProsp.find(x=>x.domain===domain);if(!d)return;
+  const{cr,aov}=caData(d);
   const r1=prompt(`CR pour ${domain}\nActuel: ${(cr*100).toFixed(1)}%\nNouveau (ex: 2.5 pour 2.5%):`,(cr*100).toFixed(1));
   if(r1===null)return;
   const r2=prompt(`Panier moyen pour ${domain}\nActuel: ${aov}€\nNouveau (€):`,aov);
   if(r2===null)return;
-  const nCR=parseFloat(r1)/100, nAOV=parseFloat(r2);
+  const nCR=parseFloat(r1)/100,nAOV=parseFloat(r2);
   if(isNaN(nCR)||isNaN(nAOV)||nCR<=0||nAOV<=0){showToast('Valeurs invalides');return;}
-  setOv(domain,nCR,nAOV);
-  renderProsp(allProsp);
-  renderCards();
-  showToast('CA recalculé: '+fmtCA(caData(d).ca));
-}
-
-function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  setOv(domain,nCR,nAOV);renderProsp(allProsp);renderCards();
+  showToast('CA: '+fmtCA(caData(d).ca));
 }
 
 // ── Scraper ──
-const PROXY  = u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
-const PROXY2 = u => `https://corsproxy.io/?${encodeURIComponent(u)}`;
-
-async function proxyFetch(url) {
-  for (const mk of [PROXY, PROXY2]) {
-    try {
-      const r = await fetch(mk(url), {signal: AbortSignal.timeout(10000)});
-      if (r.ok) return r.text();
-    } catch {}
-  }
-  throw new Error('Proxies inaccessibles');
+const PX=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+const PX2=u=>`https://corsproxy.io/?${encodeURIComponent(u)}`;
+async function proxyFetch(url){
+  for(const mk of[PX,PX2]){try{const r=await fetch(mk(url),{signal:AbortSignal.timeout(10000)});if(r.ok)return r.text();}catch{}}
+  throw new Error('Proxy inaccessible');
 }
-
-async function tryShopifyAPI(domain) {
-  try {
-    const r = await fetch(`https://${domain}/collections.json?limit=250`, {signal: AbortSignal.timeout(6000)});
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j.collections?.map(c => ({title: c.title, path: `/collections/${c.handle}`, products: c.products_count})) || null;
-  } catch { return null; }
+async function tryShopify(domain){
+  try{const r=await fetch(`https://${domain}/collections.json?limit=250`,{signal:AbortSignal.timeout(6000)});
+    if(!r.ok)return null;const j=await r.json();
+    return j.collections?.map(c=>({title:c.title,path:`/collections/${c.handle}`,products:c.products_count}))||null;
+  }catch{return null;}
 }
-
-function extractFromHTML(html, domain) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const RX = /\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
-  const seen = new Set(), list = [];
-  doc.querySelectorAll('a[href]').forEach(a => {
-    let path;
-    try { path = new URL(a.getAttribute('href'), `https://${domain}`).pathname; } catch { return; }
-    if (!RX.test(path)) return;
-    const key = path.replace(/\/+$/,'');
-    if (seen.has(key) || key.split('/').length > 5) return;
-    seen.add(key);
-    const title = a.textContent.trim().replace(/\s+/g,' ');
-    if (title && title.length < 70) list.push({title, path, products: null});
+function parseCollections(html,domain){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const RX=/\/(collections?|categorie(?:-produit)?|product-category|category)\//i;
+  const seen=new Set(),list=[];
+  doc.querySelectorAll('a[href]').forEach(a=>{
+    let path;try{path=new URL(a.getAttribute('href'),`https://${domain}`).pathname;}catch{return;}
+    if(!RX.test(path))return;const key=path.replace(/\/+$/,'');
+    if(seen.has(key)||key.split('/').length>5)return;seen.add(key);
+    const title=a.textContent.trim().replace(/\s+/g,' ');
+    if(title&&title.length<70)list.push({title,path,products:null});
   });
   return list;
 }
+function mvpN(n){return n<=5?n:n<=15?Math.max(3,Math.ceil(n*.5)):n<=40?Math.max(5,Math.ceil(n*.3)):Math.max(8,Math.min(15,Math.ceil(n*.2)));}
+let _bp=null;
 
-function mvpCount(n) {
-  if (n <= 5) return n;
-  if (n <= 15) return Math.max(3, Math.ceil(n * .5));
-  if (n <= 40) return Math.max(5, Math.ceil(n * .3));
-  return Math.max(8, Math.min(15, Math.ceil(n * .2)));
-}
-
-let _bp = null;
-
-async function openScraper(domain) {
-  document.getElementById('scDomain').textContent = domain;
-  document.getElementById('scBody').innerHTML = '<div class="loading"><span class="spinner"></span>Scraping en cours…</div>';
+async function openScraper(domain){
+  document.getElementById('scDomain').textContent=domain;
+  document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Scraping en cours…</div>';
   document.getElementById('scModal').classList.add('open');
-
-  let collections;
-  try {
-    collections = await tryShopifyAPI(domain);
-    if (!collections) {
-      const html = await proxyFetch(`https://${domain}`);
-      collections = extractFromHTML(html, domain);
-    }
-  } catch(e) {
-    document.getElementById('scBody').innerHTML =
-      `<div class="empty">❌ Impossible de scraper ${domain}<br><small style="color:var(--muted)">${e.message}</small></div>`;
-    return;
-  }
-
-  const total = collections.length, mvp = mvpCount(total), top = collections.slice(0, mvp);
-  _bp = {source:domain, scrapedAt:new Date().toISOString(), totalCollections:total,
-    mvpCollections:mvp, mvpSelection:top, allCollections:collections,
-    shopify_hint:'Admin > Products > Collections', woocommerce_hint:'Products > Categories'};
-
-  const pct = total ? Math.round(mvp/total*100) : 0;
-  document.getElementById('scBody').innerHTML = `
+  let cols;
+  try{cols=await tryShopify(domain);if(!cols){const html=await proxyFetch(`https://${domain}`);cols=parseCollections(html,domain);}}
+  catch(e){document.getElementById('scBody').innerHTML=`<div class="empty">❌ ${e.message}</div>`;return;}
+  const total=cols.length,mvp=mvpN(total),top=cols.slice(0,mvp);
+  _bp={source:domain,scrapedAt:new Date().toISOString(),totalCollections:total,mvpCollections:mvp,mvpSelection:top,allCollections:cols,shopify_hint:'Admin > Products > Collections',woo_hint:'Products > Categories'};
+  const pct=total?Math.round(mvp/total*100):0;
+  document.getElementById('scBody').innerHTML=`
     <div class="sc-stat">
-      <div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Collections trouvées</div></div>
+      <div class="sc-card"><div class="sc-card-n" style="color:var(--blue)">${total}</div><div class="sc-card-l">Collections</div></div>
       <div class="sc-card"><div class="sc-card-n" style="color:var(--green)">${mvp}</div><div class="sc-card-l">MVP recommandé</div></div>
       <div class="sc-card"><div class="sc-card-n" style="color:var(--yellow)">${pct}%</div><div class="sc-card-l">Du catalogue</div></div>
     </div>
-    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
-      Stratégie : lancer <strong style="color:var(--green)">${mvp} collections prioritaires</strong> sur ${total} pour valider le marché avant d'étendre.
-    </p>
-    <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Top ${mvp} collections à cloner</p>
-    <ul class="sc-list">
-      ${top.map((c,i)=>`<li><span class="sc-idx">#${i+1}</span><span>${c.title||c.path.split('/').pop().replace(/-/g,' ')}</span><span class="sc-path">${c.path}</span></li>`).join('')}
-    </ul>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">Lancer <strong style="color:var(--green)">${mvp} collections</strong> sur ${total} pour valider le marché.</p>
+    <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.5rem">Top ${mvp} à cloner</p>
+    <ul class="sc-list">${top.map((c,i)=>`<li><span class="sc-idx">#${i+1}</span><span>${c.title||c.path.split('/').pop().replace(/-/g,' ')}</span><span class="sc-path">${c.path}</span></li>`).join('')}</ul>
     <div class="sc-actions">
-      <button class="btn-dl" onclick="dlBlueprint()">⬇ Télécharger blueprint.json</button>
-      <button class="btn-deploy" onclick="deployAction('${domain}')">🚀 Lancer le déploiement sur domaine acquis</button>
+      <button class="btn-dl" onclick="dlBP()">⬇ blueprint.json</button>
+      <button class="btn-deploy" onclick="deployAct('${domain}')">🚀 Lancer déploiement</button>
     </div>`;
 }
+function closeSc(){document.getElementById('scModal').classList.remove('open');}
+function dlBP(){if(!_bp)return;const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(_bp,null,2)],{type:'application/json'})),download:`blueprint-${_bp.source}.json`});a.click();URL.revokeObjectURL(a.href);}
+function deployAct(src){const t=allAcq[0]?.domain;showToast(t?`${src} → ${t}`:'Aucun domaine acquisition');if(t)window.open(REGISTRAR+t,'_blank');}
 
-function closeScModal() { document.getElementById('scModal').classList.remove('open'); }
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
-function dlBlueprint() {
-  if (!_bp) return;
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(new Blob([JSON.stringify(_bp, null, 2)], {type:'application/json'})),
-    download: `blueprint-${_bp.source}.json`,
-  });
-  a.click(); URL.revokeObjectURL(a.href);
-}
-
-function deployAction(srcDomain) {
-  const target = allAcq[0]?.domain;
-  showToast(target ? `Déploiement: ${srcDomain} → ${target}` : 'Aucun domaine acquisition — lancez une chasse');
-  if (target) window.open(REGISTRAR + encodeURIComponent(target), '_blank');
-}
-
-load();
-setInterval(load,90000);
+load();setInterval(load,90000);
 </script>
 </body>
 </html>
