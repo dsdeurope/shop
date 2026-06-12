@@ -82,8 +82,7 @@
     .sc-idx{width:20px;font-size:.63rem;color:var(--muted);text-align:right;flex-shrink:0;}
     .sc-path{margin-left:auto;font-size:.63rem;color:var(--muted);font-family:'Courier New',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
     .sc-actions{display:flex;gap:.8rem;margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);flex-wrap:wrap;}
-    .btn-dl{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(68,136,255,.5);background:rgba(68,136,255,.15);color:var(--blue);}
-    .btn-deploy{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(0,255,136,.5);background:rgba(0,255,136,.15);color:var(--green);}
+    .btn-dl{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(68,136,255,.5);background:rgba(68,136,255,.15);color:var(--blue);}.btn-deploy{padding:.45rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;border:1px solid rgba(0,255,136,.5);background:rgba(0,255,136,.15);color:var(--green);}
   </style>
 </head>
 <body>
@@ -95,14 +94,13 @@
   </nav>
   <button class="btn btn-refresh" onclick="load()">↻ Actualiser</button>
 </header>
-
 <div class="cards">
   <div class="card p"><div class="card-icon">📊</div><div class="card-n" id="cntProsp">—</div><div class="card-l">Sites leaders</div></div>
   <div class="card a"><div class="card-icon">🏷️</div><div class="card-n" id="cntAcq">—</div><div class="card-l">À acquérir</div></div>
   <div class="card" style="border-color:rgba(255,68,68,.2)"><div class="card-icon">🟠</div><div class="card-n" id="cntAlert" style="color:var(--orange)">—</div><div class="card-l">Alertes achat</div></div>
   <div class="card" style="border-color:rgba(0,255,136,.2)"><div class="card-icon">📈</div><div class="card-n" id="cntCA" style="color:var(--green);font-size:1.2rem">—</div><div class="card-l">CA Estimé / mois *</div></div>
 </div>
-
+<div id="nfBar" style="padding:.5rem 2rem;display:flex;gap:.4rem;flex-wrap:wrap;border-bottom:1px solid var(--border)"></div>
 <div class="section t-prosp">
   <div class="section-header">
     <span class="section-title">Sites Leaders (Prospection)</span>
@@ -118,7 +116,6 @@
   </table></div>
 </div>
 <p style="font-size:.63rem;color:var(--muted);padding:.2rem 1rem .8rem;font-style:italic">* CA = trafic estimé × taux de conversion × panier moyen. Estimation heuristique — non contractuel. ↑ = signal Wayback actif.</p>
-
 <div class="section t-acq">
   <div class="section-header">
     <span class="section-title">Domaines à Acquérir</span>
@@ -149,8 +146,7 @@
 const API_HUNTER='https://v35-domain-hunter.ernestpedanou.workers.dev';
 const API_SEQ='https://v35-sequenceur.ernestpedanou.workers.dev';
 const REGISTRAR='https://www.ovh.com/fr/domaines/?domain=';
-let allProsp=[],allAcq=[];
-
+let allProsp=[],allAcq=[],nicheF=null;
 // ── Niche data ──
 const NM={'Lingerie':{CR:.028,AOV:58},'Mode Femme':{CR:.022,AOV:72},'Mode Homme':{CR:.018,AOV:85},
   'Luminaires':{CR:.015,AOV:145},'Décoration':{CR:.014,AOV:110},'Beauté':{CR:.025,AOV:48},
@@ -159,7 +155,6 @@ const NM={'Lingerie':{CR:.028,AOV:58},'Mode Femme':{CR:.022,AOV:72},'Mode Homme'
   'High-Tech':{CR:.014,AOV:210},'Enfants':{CR:.022,AOV:65},'Alimentaire':{CR:.030,AOV:38},
   'Animaux':{CR:.025,AOV:42},'Voyage':{CR:.015,AOV:155},'Auto':{CR:.012,AOV:180},
   'default':{CR:.018,AOV:50}};
-
 const NK={'Lingerie':['lingerie','dessous','soutien','culotte','bra'],
   'Mode Femme':['robe','femme','mode','fashion','vetements'],'Mode Homme':['homme','men','menswear','costume'],
   'Luminaires':['lampe','lumiere','luminaire','eclairage'],'Décoration':['deco','decoration','maison','meuble','canape'],
@@ -170,15 +165,12 @@ const NK={'Lingerie':['lingerie','dessous','soutien','culotte','bra'],
   'Enfants':['enfant','bebe','kids','jouet'],'Alimentaire':['food','epicerie','biscuit','cafe','bio'],
   'Animaux':['animal','chien','chat','pet'],'Voyage':['voyage','travel','camping','trek'],
   'Auto':['auto','moto','voiture','pieces','tuning']};
-
 const NC={'Lingerie':'#f472b6','Mode Femme':'#c084fc','Mode Homme':'#818cf8','Luminaires':'#fbbf24',
   'Décoration':'#fb923c','Beauté':'#f43f5e','Bien-être':'#2dd4bf','Sport':'#34d399',
   'Bijoux':'#a78bfa','Bagagerie':'#60a5fa','Maroquinerie':'#a16207','Accessoires':'#e879f9',
   'High-Tech':'#38bdf8','Enfants':'#4ade80','Alimentaire':'#84cc16','Animaux':'#f97316',
   'Voyage':'#06b6d4','Auto':'#94a3b8'};
-
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,' ');}
-
 function detectNiches(domain){
   const parts=norm(domain.replace(/\.(fr|com|net|org|eu|io)$/,'')).split(/[-_. ]+/);
   const sc={};
@@ -190,43 +182,44 @@ function detectNiches(domain){
   const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).filter(([,s])=>s>=1).map(([n])=>n).slice(0,3);
   return r.length?r:null;
 }
-
 function nichesHTML(niches){
   if(!niches)return'<span style="color:var(--muted);font-size:.63rem">…</span>';
   return niches.map((n,i)=>{
     if(n==='Non-classé')return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2)">Non-classé</span>`;
+    if(n==='Analyse Manuelle Requise')return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.3)" title="3 tentatives échouées">⚠ Manuel</span>`;
     const c=NC[n]||'#64748b';
-    return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;font-weight:600;background:${c}${i?'12':'22'};color:${c};border:1px solid ${c}${i?'22':'44'}">${n}</span>`;
+    return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;font-weight:600;cursor:pointer;background:${c}${i?'12':'22'};color:${c};border:1px solid ${c}${i?'22':'44'}" onclick="filterByNiche('${n}')" title="Filtrer: ${n}">${n}</span>`;
   }).join(' ');
 }
-
 function nichesTags(domain){
   const cached=JSON.parse(localStorage.getItem('nc_'+domain)||'null');
   return nichesHTML(cached||detectNiches(domain));
 }
-
 async function autoAnalyzeNiches(domains){
   const todo=domains.filter(d=>!localStorage.getItem('nc_'+d.domain)&&!detectNiches(d.domain)).slice(0,5);
   for(const d of todo){
+    let niches=null;
     try{
+      const r=await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:d.domain,action:'analyze-mesh'}),signal:AbortSignal.timeout(15000)});
+      if(r.ok){const j=await r.json();if(j.niches?.length)niches=j.niches;}
+    }catch{}
+    if(!niches)try{
       const html=await proxyFetch(`https://${d.domain}`);
       const doc=new DOMParser().parseFromString(html,'text/html');
-      const text=[doc.title,...[...doc.querySelectorAll('meta[name="description"],h1,h2,nav a')].slice(0,15).map(el=>el.content||el.textContent)].join(' ');
+      const text=[doc.title,...[...doc.querySelectorAll('meta[name="description"],meta[property="og:description"],h1,nav a')].slice(0,12).map(el=>el.content||el.textContent)].join(' ');
       const sc={},tn=norm(text);
       for(const[n,ws]of Object.entries(NK))for(const w of ws){const c=(tn.match(new RegExp(w,'g'))||[]).length;if(c)sc[n]=(sc[n]||0)+c;}
-      const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
-      localStorage.setItem('nc_'+d.domain,JSON.stringify(r.length?r:['Non-classé']));
-    }catch{localStorage.setItem('nc_'+d.domain,JSON.stringify(['Non-classé']));}
+      niches=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
+    }catch{}
+    localStorage.setItem('nc_'+d.domain,JSON.stringify(niches?.length?niches:['Non-classé']));
     const cell=document.getElementById('nc_'+d.domain.replace(/[^a-z0-9]/g,'_'));
     if(cell)cell.innerHTML=nichesHTML(JSON.parse(localStorage.getItem('nc_'+d.domain)));
-    await new Promise(r=>setTimeout(r,600));
+    await new Promise(r=>setTimeout(r,400));
   }
 }
-
 // ── CA Estimé ──
 function getOv(d){try{return JSON.parse(localStorage.getItem('ca_'+d));}catch{return null;}}
 function setOv(d,cr,aov){localStorage.setItem('ca_'+d,JSON.stringify({cr:+cr,aov:+aov}));}
-
 function estimTraf(d){
   const fp=d.fpScore||0,sn=d.wayback?.snapshots||0;
   const boost=JSON.parse(localStorage.getItem('wbr_'+d.domain)||'null');
@@ -289,19 +282,26 @@ async function checkDispo(dom,btn){
   btn.disabled=false;
 }
 
-// ── Common ──
+// ── Niche filter ──
+function filterByNiche(n){nicheF=(nicheF===n?null:n);renderProsp(allProsp);renderAcq(allAcq);renderNicheFilter();}
+function renderNicheFilter(){
+  const cts={};[...allProsp,...allAcq].forEach(d=>{(JSON.parse(localStorage.getItem('nc_'+d.domain)||'null')||detectNiches(d.domain)||[]).filter(n=>n&&n!=='Non-classé'&&n!=='Analyse Manuelle Requise').forEach(n=>{cts[n]=(cts[n]||0)+1;});});
+  const bar=document.getElementById('nfBar');if(!bar)return;
+  bar.innerHTML=(nicheF?`<button onclick="filterByNiche(null)" style="padding:3px 10px;border-radius:12px;font-size:.65rem;cursor:pointer;border:1px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);color:var(--red)">✕ ${nicheF}</button> `:'')+Object.entries(cts).sort((a,b)=>b[1]-a[1]).map(([n,c])=>{const col=NC[n]||'#64748b';const act=nicheF===n;return`<button onclick="filterByNiche('${n}')" style="padding:3px 10px;border-radius:12px;font-size:.65rem;cursor:pointer;border:1px solid ${col}${act?'99':'33'};background:${col}${act?'33':'11'};color:${col};font-weight:${act?700:400}">${n} <span style="opacity:.6">${c}</span></button>`;}).join('');
+}
 function getType(d){return d.type||(d.availability==='actif'?'PROSPECTION':'ACQUISITION');}
 function availClass(a){return{actif:'av-actif',disponible:'av-disponible','parké':'av-parke','expiré':'av-expire'}[a]||'av-other';}
 function fpClass(s){return s>=50?'fp-hi':s>=30?'fp-med':'fp-lo';}
-
 async function load(){
+  try{const nm=await fetch('/data/niche_map.json').then(r=>r.json());for(const[d,ns]of Object.entries(nm))if(!localStorage.getItem('nc_'+d))localStorage.setItem('nc_'+d,JSON.stringify(ns));}catch{}
+  try{const km=await fetch(`${API_SEQ}?action=niches`).then(r=>r.json());if(typeof km==='object'&&!km.error)for(const[d,ns]of Object.entries(km))if(!localStorage.getItem('nc_'+d))localStorage.setItem('nc_'+d,JSON.stringify(ns));}catch{}
   try{
     const r=await fetch(`${API_HUNTER}?action=report`);
     const data=await r.json();
     const all=(data.opportunities||[]).filter(d=>!d.domain.includes('/'));
     allProsp=all.filter(d=>getType(d)==='PROSPECTION');
     allAcq  =all.filter(d=>getType(d)==='ACQUISITION');
-    renderCards();renderProsp(allProsp);renderAcq(allAcq);
+    renderCards();renderProsp(allProsp);renderAcq(allAcq);renderNicheFilter();
     setTimeout(refreshWBActive,2000);
   }catch{
     document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">API inaccessible.</td></tr>';
@@ -324,8 +324,9 @@ function filterTable(type,val){
 }
 
 function renderProsp(list){
-  document.getElementById('countProsp').textContent=list.length;
-  const sorted=[...list].sort((a,b)=>(b.fpScore||0)-(a.fpScore||0));
+  const flist=nicheF?list.filter(d=>{const ns=JSON.parse(localStorage.getItem('nc_'+d.domain)||'null')||detectNiches(d.domain)||[];return ns.includes(nicheF);}):list;
+  document.getElementById('countProsp').textContent=flist.length;
+  const sorted=[...flist].sort((a,b)=>(b.fpScore||0)-(a.fpScore||0));
   if(!sorted.length){document.getElementById('tbodyProsp').innerHTML='<tr><td colspan="9" class="empty">Aucun site leader.</td></tr>';return;}
   document.getElementById('tbodyProsp').innerHTML=sorted.map(d=>{
     const dc=d.diode?.color||'grey',wb=d.wayback||{};
@@ -348,8 +349,9 @@ function renderProsp(list){
 }
 
 function renderAcq(list){
-  document.getElementById('countAcq').textContent=list.length;
-  const sorted=[...list].sort((a,b)=>{
+  const flist=nicheF?list.filter(d=>{const ns=JSON.parse(localStorage.getItem('nc_'+d.domain)||'null')||detectNiches(d.domain)||[];return ns.includes(nicheF);}):list;
+  document.getElementById('countAcq').textContent=flist.length;
+  const sorted=[...flist].sort((a,b)=>{
     const pa=a.diode?.priority||9,pb=b.diode?.priority||9;
     return pa!==pb?pa-pb:(b.wayback?.snapshots||0)-(a.wayback?.snapshots||0);
   });
@@ -373,12 +375,18 @@ function renderAcq(list){
 }
 
 async function triggerSeq(domain,btn){
-  btn.classList.add('running');btn.textContent='⏳';
+  btn.disabled=true;btn.textContent='…';
   try{
-    await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,action:'analyze-mesh'})});
+    const r=await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,action:'analyze-mesh'})});
+    const data=await r.json();
+    if(data.niches?.length&&data.niches[0]!=='Non-classé'){
+      localStorage.setItem('nc_'+domain,JSON.stringify(data.niches));
+      const cell=document.getElementById('nc_'+domain.replace(/[^a-z0-9]/g,'_'));
+      if(cell)cell.innerHTML=nichesHTML(data.niches);
+      showToast('Niches: '+data.niches.join(' · '));
+    }else showToast('Audit lancé — '+domain);
     btn.textContent='✓';btn.style.color='var(--green)';btn.style.borderColor='rgba(0,255,136,.4)';
-    showToast('Séquenceur lancé: '+domain);
-  }catch{btn.textContent='Audit';btn.style.color='';btn.classList.remove('running');showToast('Erreur séquenceur — réessayez');}
+  }catch{btn.textContent='Audit';btn.style.color='';showToast('Erreur connexion séquenceur');}
   btn.disabled=false;
 }
 
@@ -386,7 +394,6 @@ function buyDomain(domain,btn){
   window.open(REGISTRAR+encodeURIComponent(domain),'_blank');
   btn.style.cssText='border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08);color:var(--green)';btn.textContent='✓ OVH';
 }
-
 function editCA(domain){
   const d=allProsp.find(x=>x.domain===domain);if(!d)return;
   const{cr,aov}=caData(d);
@@ -401,11 +408,19 @@ function editCA(domain){
 }
 
 // ── Scraper ──
-const PX=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
-const PX2=u=>`https://corsproxy.io/?${encodeURIComponent(u)}`;
+function isCFChallenge(h){return/cf-browser-verification|Just a moment\.\.\.|__cf_chl/.test(h);}
 async function proxyFetch(url){
-  for(const mk of[PX,PX2]){try{const r=await fetch(mk(url),{signal:AbortSignal.timeout(10000)});if(r.ok)return r.text();}catch{}}
-  throw new Error('Proxy inaccessible');
+  const dom=url.replace(/^https?:\/\//,'').split('/')[0];
+  for(const mk of[
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ]){try{const r=await fetch(mk(url),{signal:AbortSignal.timeout(9000)});if(!r.ok)continue;const t=await r.text();if(!isCFChallenge(t))return t;}catch{}}
+  try{
+    const j=await fetch(`https://web.archive.org/cdx/search/cdx?url=${dom}&output=json&limit=1&fl=timestamp&from=20250101&filter=statuscode:200`,{signal:AbortSignal.timeout(5000)}).then(r=>r.json());
+    if(j.length>1){const wb=await fetch(`https://web.archive.org/web/${j[1][0]}if_/${url}`,{signal:AbortSignal.timeout(12000)});if(wb.ok)return wb.text();}
+  }catch{}
+  throw new Error('Proxy + Wayback inaccessibles');
 }
 async function tryShopify(domain){
   try{const r=await fetch(`https://${domain}/collections.json?limit=250`,{signal:AbortSignal.timeout(6000)});
@@ -456,7 +471,6 @@ async function openScraper(domain){
 function closeSc(){document.getElementById('scModal').classList.remove('open');}
 function dlBP(){if(!_bp)return;const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(_bp,null,2)],{type:'application/json'})),download:`blueprint-${_bp.source}.json`});a.click();URL.revokeObjectURL(a.href);}
 function deployAct(src){const t=allAcq[0]?.domain;showToast(t?`${src} → ${t}`:'Aucun domaine acquisition');if(t)window.open(REGISTRAR+t,'_blank');}
-
 async function openAlts(domain){
   document.getElementById('scDomain').textContent=domain+' — Alt. Acquisition';
   document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Vérification DNS…</div>';
@@ -478,7 +492,6 @@ async function openAlts(domain){
       </div>`).join('')}
     </div>`;
 }
-
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
 load();setInterval(load,90000);
