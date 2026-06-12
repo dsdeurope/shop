@@ -117,6 +117,7 @@
     <tbody id="tbodyProsp"><tr><td colspan="9" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
   </table></div>
 </div>
+<p style="font-size:.63rem;color:var(--muted);padding:.2rem 1rem .8rem;font-style:italic">* CA = trafic estimé × taux de conversion × panier moyen. Estimation heuristique — non contractuel. ↑ = signal Wayback actif.</p>
 
 <div class="section t-acq">
   <div class="section-header">
@@ -127,9 +128,9 @@
   <div class="table-wrap"><table>
     <thead><tr>
       <th>Domaine</th><th>Niches</th><th>Disponibilité</th><th>Diode</th>
-      <th>Score</th><th>WB</th><th>3 Alternatives libres</th><th>Acheter</th>
+      <th>Score</th><th>WB</th><th>Actions</th>
     </tr></thead>
-    <tbody id="tbodyAcq"><tr><td colspan="8" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
+    <tbody id="tbodyAcq"><tr><td colspan="7" class="loading"><span class="spinner"></span>Chargement…</td></tr></tbody>
   </table></div>
 </div>
 
@@ -190,27 +191,36 @@ function detectNiches(domain){
   return r.length?r:null;
 }
 
-function nichesTags(domain){
-  const cached=JSON.parse(localStorage.getItem('nc_'+domain)||'null');
-  const niches=cached||detectNiches(domain);
-  if(!niches) return`<button class="btn-sm btn-detect" onclick="detectLive('${domain}')">⚡ Analyser</button>`;
-  return niches.map((n,i)=>{const c=NC[n]||'#64748b';
-    return`<span style="display:inline-block;margin:1px;padding:2px 7px;border-radius:8px;font-size:.65rem;font-weight:600;background:${c}${i?'12':'22'};color:${c};border:1px solid ${c}${i?'22':'44'}">${n}</span>`;
-  }).join('');
+function nichesHTML(niches){
+  if(!niches)return'<span style="color:var(--muted);font-size:.63rem">…</span>';
+  return niches.map((n,i)=>{
+    if(n==='Non-classé')return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2)">Non-classé</span>`;
+    const c=NC[n]||'#64748b';
+    return`<span style="padding:2px 7px;border-radius:8px;font-size:.63rem;font-weight:600;background:${c}${i?'12':'22'};color:${c};border:1px solid ${c}${i?'22':'44'}">${n}</span>`;
+  }).join(' ');
 }
 
-async function detectLive(domain){
-  showToast('Détection niche en cours…');
-  try{
-    const html=await proxyFetch(`https://${domain}`);
-    const doc=new DOMParser().parseFromString(html,'text/html');
-    const text=[doc.title,...[...doc.querySelectorAll('meta[name="description"],h1,h2,nav a')].slice(0,15).map(el=>el.content||el.textContent)].join(' ');
-    const sc={},tn=norm(text);
-    for(const[n,ws]of Object.entries(NK))for(const w of ws){const c=(tn.match(new RegExp(w,'g'))||[]).length;if(c)sc[n]=(sc[n]||0)+c;}
-    const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
-    if(r.length){localStorage.setItem('nc_'+domain,JSON.stringify(r));renderProsp(allProsp);showToast(r.join(' · '));}
-    else showToast('Niche non identifiable — essayez SCRAPER');
-  }catch{showToast('Erreur proxy — réessayez');}
+function nichesTags(domain){
+  const cached=JSON.parse(localStorage.getItem('nc_'+domain)||'null');
+  return nichesHTML(cached||detectNiches(domain));
+}
+
+async function autoAnalyzeNiches(domains){
+  const todo=domains.filter(d=>!localStorage.getItem('nc_'+d.domain)&&!detectNiches(d.domain)).slice(0,5);
+  for(const d of todo){
+    try{
+      const html=await proxyFetch(`https://${d.domain}`);
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const text=[doc.title,...[...doc.querySelectorAll('meta[name="description"],h1,h2,nav a')].slice(0,15).map(el=>el.content||el.textContent)].join(' ');
+      const sc={},tn=norm(text);
+      for(const[n,ws]of Object.entries(NK))for(const w of ws){const c=(tn.match(new RegExp(w,'g'))||[]).length;if(c)sc[n]=(sc[n]||0)+c;}
+      const r=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
+      localStorage.setItem('nc_'+d.domain,JSON.stringify(r.length?r:['Non-classé']));
+    }catch{localStorage.setItem('nc_'+d.domain,JSON.stringify(['Non-classé']));}
+    const cell=document.getElementById('nc_'+d.domain.replace(/[^a-z0-9]/g,'_'));
+    if(cell)cell.innerHTML=nichesHTML(JSON.parse(localStorage.getItem('nc_'+d.domain)));
+    await new Promise(r=>setTimeout(r,600));
+  }
 }
 
 // ── CA Estimé ──
@@ -245,7 +255,7 @@ async function refreshWBActive(){
       const j=await r.json();
       if(j.length>1){localStorage.setItem('wbr_'+d.domain,'active');
         const cell=document.getElementById('ca_'+d.domain.replace(/\W/g,'_'));
-        if(cell){const{ca,cr,aov}=caData(d);cell.innerHTML=`<span class="ca-val" title="Trafic actif (WB récent)">${fmtCA(ca)} ↑*</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button>`;}
+        if(cell){const{ca,cr,aov}=caData(d);cell.innerHTML=`<span class="ca-val" title="Trafic actif — snapshot WB récent">${fmtCA(ca)} ↑</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button>`;}
       }
     }catch{}
   }
@@ -304,7 +314,7 @@ function renderCards(){
   document.getElementById('cntProsp').textContent=allProsp.length;
   document.getElementById('cntAcq').textContent=allAcq.length;
   document.getElementById('cntAlert').textContent=all.filter(d=>d.diode?.color==='orange').length;
-  document.getElementById('cntCA').textContent=fmtCA(allProsp.reduce((s,d)=>s+caData(d).ca,0))+' *';
+  document.getElementById('cntCA').textContent=fmtCA(allProsp.reduce((s,d)=>s+caData(d).ca,0));
 }
 
 function filterTable(type,val){
@@ -324,16 +334,17 @@ function renderProsp(list){
     const caId='ca_'+d.domain.replace(/\W/g,'_');
     return`<tr>
       <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
-      <td>${nichesTags(d.domain)}</td>
+      <td id="nc_${d.domain.replace(/[^a-z0-9]/g,'_')}">${nichesTags(d.domain)}</td>
       <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
       <td><span class="fp-score ${fpClass(d.fpScore||0)}">${d.fpScore||0}%</span></td>
       <td style="font-size:.76rem">${d.totalScore||0}/100</td>
       <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots?`✓ ${wb.snapshots}`:'—'}</td>
-      <td id="${caId}"><span class="ca-val">${fmtCA(ca)} *</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button></td>
+      <td id="${caId}"><span class="ca-val">${fmtCA(ca)}</span> <button class="btn-edit" onclick="editCA('${d.domain}')" title="CR:${(cr*100).toFixed(1)}% AOV:${aov}€">✎</button></td>
       <td>${competCell(cs)}</td>
-      <td><div style="display:flex;gap:3px"><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">📊</button><button class="btn-sm btn-scrape" ${hasHistory?'':`disabled title="Aucun historique — site potentiellement hors index"`} onclick="${hasHistory?`openScraper('${d.domain}')`:''}">🔬 Scraper</button></div></td>
+      <td><div style="display:flex;gap:3px;white-space:nowrap"><button class="btn-sm btn-seq" id="seq-${d.domain}" onclick="triggerSeq('${d.domain}',this)">Audit</button><button class="btn-sm btn-scrape" ${hasHistory?'':`disabled title="Aucun historique — potentiellement hors index"`} onclick="${hasHistory?`openScraper('${d.domain}')`:''}">Scraper</button></div></td>
     </tr>`;
   }).join('');
+  autoAnalyzeNiches(sorted);
 }
 
 function renderAcq(list){
@@ -342,25 +353,23 @@ function renderAcq(list){
     const pa=a.diode?.priority||9,pb=b.diode?.priority||9;
     return pa!==pb?pa-pb:(b.wayback?.snapshots||0)-(a.wayback?.snapshots||0);
   });
-  if(!sorted.length){document.getElementById('tbodyAcq').innerHTML='<tr><td colspan="8" class="empty">Aucun domaine à acquérir.</td></tr>';return;}
+  if(!sorted.length){document.getElementById('tbodyAcq').innerHTML='<tr><td colspan="7" class="empty">Aucun domaine à acquérir.</td></tr>';return;}
   document.getElementById('tbodyAcq').innerHTML=sorted.map(d=>{
     const dc=d.diode?.color||'grey',wb=d.wayback||{};
-    const alts=suggestAlts(d.domain);
-    const altHTML=alts.map(alt=>{
-      const eid='c'+alt.replace(/[^a-z0-9]/g,'');
-      return`<div class="alt-row"><span class="alt-d">${alt}</span><button id="${eid}" class="btn-sm btn-check" onclick="checkDispo('${alt}',this)" style="padding:1px 6px">✓</button><button class="btn-sm btn-buy" onclick="window.open('${REGISTRAR}${alt}','_blank')" style="padding:1px 6px">💰</button></div>`;
-    }).join('');
     return`<tr>
       <td><a href="https://${d.domain}" target="_blank" class="domain-link">${d.domain}</a></td>
-      <td>${nichesTags(d.domain)}</td>
+      <td id="nc_${d.domain.replace(/[^a-z0-9]/g,'_')}">${nichesTags(d.domain)}</td>
       <td><span class="avail-badge ${availClass(d.availability)}">${d.availability||'inconnu'}</span></td>
       <td><span class="diode d-${dc}">${d.diode?.verdict||'—'}</span></td>
       <td style="font-size:.76rem">${d.totalScore||0}/100</td>
       <td class="wb ${wb.snapshots?'ok':''}">${wb.snapshots?`✓ ${wb.snapshots}`:'—'}</td>
-      <td style="min-width:220px">${altHTML}</td>
-      <td><button class="btn-sm btn-seq" style="border-color:rgba(255,140,0,.4);background:rgba(255,140,0,.1);color:var(--orange)" onclick="buyDomain('${d.domain}',this)">💰 Prix</button></td>
+      <td><div style="display:flex;gap:3px;white-space:nowrap">
+        <button class="btn-sm btn-check" onclick="openAlts('${d.domain}')">Alt. Achat</button>
+        <button class="btn-sm" style="border-color:rgba(255,140,0,.4);background:rgba(255,140,0,.1);color:var(--orange)" onclick="buyDomain('${d.domain}',this)">Prix OVH</button>
+      </div></td>
     </tr>`;
   }).join('');
+  autoAnalyzeNiches(sorted);
 }
 
 async function triggerSeq(domain,btn){
@@ -369,7 +378,8 @@ async function triggerSeq(domain,btn){
     await fetch(API_SEQ,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain,action:'analyze-mesh'})});
     btn.textContent='✓';btn.style.color='var(--green)';btn.style.borderColor='rgba(0,255,136,.4)';
     showToast('Séquenceur lancé: '+domain);
-  }catch{btn.textContent='✗';btn.style.color='var(--red)';btn.classList.remove('running');}
+  }catch{btn.textContent='Audit';btn.style.color='';btn.classList.remove('running');showToast('Erreur séquenceur — réessayez');}
+  btn.disabled=false;
 }
 
 function buyDomain(domain,btn){
@@ -446,6 +456,28 @@ async function openScraper(domain){
 function closeSc(){document.getElementById('scModal').classList.remove('open');}
 function dlBP(){if(!_bp)return;const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(_bp,null,2)],{type:'application/json'})),download:`blueprint-${_bp.source}.json`});a.click();URL.revokeObjectURL(a.href);}
 function deployAct(src){const t=allAcq[0]?.domain;showToast(t?`${src} → ${t}`:'Aucun domaine acquisition');if(t)window.open(REGISTRAR+t,'_blank');}
+
+async function openAlts(domain){
+  document.getElementById('scDomain').textContent=domain+' — Alt. Acquisition';
+  document.getElementById('scBody').innerHTML='<div class="loading"><span class="spinner"></span>Vérification DNS…</div>';
+  document.getElementById('scModal').classList.add('open');
+  const alts=suggestAlts(domain);
+  const res=await Promise.all(alts.map(async alt=>{
+    try{const r=await fetch(`https://cloudflare-dns.com/dns-query?name=${alt}&type=A`,{headers:{Accept:'application/dns-json'}});
+      const j=await r.json();return{alt,free:j.Status===3||!j.Answer?.length};
+    }catch{return{alt,free:null};}
+  }));
+  const niches=JSON.parse(localStorage.getItem('nc_'+domain)||'null')||detectNiches(domain)||[];
+  document.getElementById('scBody').innerHTML=`
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.2rem">Alternatives pour <strong>${domain}</strong>${niches.length?' · '+niches.slice(0,2).join(', '):''}</p>
+    <div style="display:flex;flex-direction:column;gap:.6rem">
+      ${res.map(({alt,free})=>`<div style="display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;background:#0d0d0d;border-radius:8px;border:1px solid ${free?'rgba(0,255,136,.2)':free===false?'rgba(255,68,68,.15)':'var(--border)'}">
+        <span style="font-family:'Courier New',monospace;font-size:.85rem;flex:1">${alt}</span>
+        <span style="font-size:.78rem;font-weight:700;color:${free?'var(--green)':free===false?'var(--red)':'var(--muted)'}">${free?'✅ Libre':free===false?'🔴 Pris':'?'}</span>
+        <button class="btn-dl" style="padding:.3rem .8rem;font-size:.75rem" onclick="window.open('${REGISTRAR}${alt}','_blank')">💰 Acheter</button>
+      </div>`).join('')}
+    </div>`;
+}
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
